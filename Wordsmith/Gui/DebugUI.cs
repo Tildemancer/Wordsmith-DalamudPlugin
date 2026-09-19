@@ -89,7 +89,7 @@ internal sealed class DebugUI : Window
             else
             {
                 _ = ImGui.Combo( "##ScratchPadConsoleSelectionCombo", ref _consolePadNumber, options, options.Length );
-                w = WordsmithUI.GetWindow( options[_consolePadNumber] );
+                w = WordsmithUI.GetWindow( options[_consolePadNumber] ) as Window;
             }
 
             if ( ImGui.BeginChildFrame(99, new (ImGui.GetContentRegionAvail().X, WordsmithUI.LineHeight * 15 - Wordsmith.BUTTON_Y.Scale()*2 ) ) )

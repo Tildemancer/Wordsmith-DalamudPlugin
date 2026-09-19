@@ -97,6 +97,8 @@ public sealed class Wordsmith : IDalamudPlugin
     [PluginService]
     internal static IPluginLog PluginLog { get; private set; } = null!;
 
+    private SpellIpc? _spellIpc;
+
     [PluginService]
     internal static ITextureProvider TextureProvider { get; private set; } = null!;
 
@@ -114,6 +116,15 @@ public sealed class Wordsmith : IDalamudPlugin
     /// </summary>
     internal static WebManifest WebManifest { get; private set; } = null!;
 
+    /// <summary>
+    /// The author's donation link, for a host that gathers its credits in one place.
+    ///
+    /// Exposed as the address alone so the host need not see the manifest type, and
+    /// read from the manifest rather than written down anywhere, since the author can
+    /// change where it points. Empty until the manifest has been fetched.
+    /// </summary>
+    public static string KofiUrl => WebManifest?.Kofi ?? string.Empty;
+
     #region Constructor and Disposer
     /// <summary>
     /// Default constructor and initializer for the Wordsmith plugin.
@@ -122,6 +133,12 @@ public sealed class Wordsmith : IDalamudPlugin
     {
         // Get the configuration.
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+        // Look for a splitter plugin; absent one, everything below behaves as before.
+        Hosting.Initialise();
+
+        // Offer the spellchecker to other plugins.
+        _spellIpc = new SpellIpc();
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
 
@@ -137,7 +154,23 @@ public sealed class Wordsmith : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi += WordsmithUI.ShowScratchPad;
 
 
-        WebManifest = Git.GetManifest();
+        // Fetched off the drawing thread, because it is three HTTP attempts against a
+        // remote host with a blocking .Result on each. Done here, the game froze for
+        // however long the network took — and for a timeout if the host was down.
+        // Nothing needs it immediately: it supplies the donation link and the list of
+        // downloadable dictionaries, both read long after startup.
+        WebManifest = new();
+        _ = System.Threading.Tasks.Task.Run( () =>
+        {
+            try
+            {
+                WebManifest = Git.GetManifest();
+            }
+            catch ( Exception e )
+            {
+                PluginLog.Error( $"Could not fetch the web manifest.\n{e}" );
+            }
+        } );
 
         // Register handlers for draw and openconfig events.
         PluginInterface.UiBuilder.Draw += WordsmithUI.Draw;
@@ -152,6 +185,12 @@ public sealed class Wordsmith : IDalamudPlugin
     /// </summary>
     public void Dispose()
     {
+        this._spellIpc?.Dispose();
+        DisposeInner();
+    }
+
+    private void DisposeInner()
+    {
         // Remove events.
         PluginInterface.UiBuilder.Draw -= WordsmithUI.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= WordsmithUI.ShowSettings;
@@ -164,6 +203,11 @@ public sealed class Wordsmith : IDalamudPlugin
 
         // Dispose of the UI
         WordsmithUI.Dispose();
+
+        // Let the dictionaries go. They are static, so inside a host plugin they would
+        // otherwise outlive the module being switched off — twenty-odd megabytes kept
+        // for something that is not running.
+        Lang.Unload();
     }
 
     internal static void ResetConfig()

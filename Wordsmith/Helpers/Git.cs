@@ -15,8 +15,9 @@ internal sealed class Git
         using ( HttpClient client = new() )
         {
             int tries = 3;
-            // Force refresh
-            client.DefaultRequestHeaders.IfModifiedSince = DateTimeOffset.UtcNow;
+            // Same as below: asking for anything modified since this instant gets
+            // "not modified" back, which throws. Ask not to serve from cache.
+            client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             while ( tries-- > 0 )
             {
                 string raw = "";
@@ -39,7 +40,7 @@ internal sealed class Git
                 catch ( Exception e )
                 {
                     // Disable the IfModifiedSince header to avoid a 304 response error.
-                    client.DefaultRequestHeaders.IfModifiedSince = null;
+                    client.DefaultRequestHeaders.CacheControl = null;
                     Wordsmith.PluginLog.Warning( $"Failed to get manifest. Tries remaining {tries}. Error: {e.Message}\nRaw: {raw}" );
                 }
             }
@@ -53,8 +54,12 @@ internal sealed class Git
         string result = "";
         using ( HttpClient client = new() )
         {
-            // Force refresh
-            client.DefaultRequestHeaders.IfModifiedSince = DateTimeOffset.Now;
+            // Asking for anything modified since this instant is a request the
+            // server answers with "not modified", which is not a success code and
+            // so throws. It was meant to force a refresh; it guaranteed a failed
+            // first attempt and a warning in the log on every startup. Saying not
+            // to serve from cache is the header that actually does that.
+            client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             int tries = 3;
             while ( tries-- > 0 )
             {
@@ -68,7 +73,7 @@ internal sealed class Git
                 catch ( Exception e )
                 {
                     // Disable refresh request.
-                    client.DefaultRequestHeaders.IfModifiedSince = null;
+                    client.DefaultRequestHeaders.CacheControl = null;
                     Wordsmith.PluginLog.Warning( $"Error loading dictionary from web: {e.Message}" );
                 }
             }            

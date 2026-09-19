@@ -42,6 +42,10 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="WeCantSpell.Hunspell" Version="7.0.1" />
+  </ItemGroup>
+
   <PropertyGroup>
     <Author>Mythic Palette</Author>
     <Name>Wordsmith</Name>

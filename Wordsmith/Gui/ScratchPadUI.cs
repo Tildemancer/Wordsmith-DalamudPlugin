@@ -885,7 +885,7 @@ internal sealed class ScratchPadUI : Window
 
             // Draw the copy button with no spacing.
             ImGui.SameLine( 0, 0 );
-            if ( ImGui.Button( $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}", new( width - Wordsmith.BUTTON_Y.Scale() * 2, Wordsmith.BUTTON_Y.Scale() ) ) )
+            if ( ImGui.Button( ButtonLabel(), new( width - Wordsmith.BUTTON_Y.Scale() * 2, Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoCopyToClipboard();
 
             // Push the font and draw the next chunk button with no spacing.
@@ -902,7 +902,7 @@ internal sealed class ScratchPadUI : Window
         }
         else // If there is only one chunk simply draw a normal button.
         {
-            if ( ImGui.Button( $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}", new( width, Wordsmith.BUTTON_Y.Scale() ) ) )
+            if ( ImGui.Button( ButtonLabel(), new( width, Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoCopyToClipboard();
         }
     }
@@ -1234,6 +1234,24 @@ internal sealed class ScratchPadUI : Window
             // If there are no chunks to copy exit the function.
             if ( this._chunks.Count == 0 )
                 return;
+
+            // With a splitter present the button sends rather than fills the
+            // clipboard, and sends the whole message at once: it paces the parts
+            // itself, so walking them one press at a time is the very thing it
+            // removes the need for.
+            if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine() ) )
+            {
+                if ( Wordsmith.Configuration.TrackWordStatistics )
+                    foreach ( TextChunk chunk in this._chunks )
+                        this._statisticsTracker.AddChunk( chunk );
+
+                this._nextChunk = 0;
+
+                if ( Wordsmith.Configuration.AutomaticallyClearAfterLastCopy )
+                    DoClearText();
+
+                return;
+            }
 
             // Copy the next chunk over.
             ImGui.SetClipboardText( CreateCompleteTextChunk( this._chunks[this._nextChunk], this.UseOOC, this._nextChunk, this._chunks.Count ) );
@@ -1647,6 +1665,11 @@ internal sealed class ScratchPadUI : Window
     /// <returns>A <see cref="string"/> with all relevant data.</returns>
     private static string CreateCompleteTextChunk( TextChunk chunk, bool OOC, int index, int count )
     {
+        // A line from an external splitter already carries its header, markers and
+        // tags. Building Wordsmith's on top would put two of each on every line.
+        if ( Hosting.SplitterAvailable )
+            return chunk.Text;
+
         // Build a string with:
         string result = chunk.Header.Length > 0 ? $"{chunk.Header} " : "";
 
@@ -1721,7 +1744,54 @@ internal sealed class ScratchPadUI : Window
     /// <summary>
     /// Runs FFXIVify on this pad.
     /// </summary>
-    internal void FFXIVify() => this._chunks = ChatHelper.FFXIVify( this.Header, this.ScratchString.Unwrap(), this.UseOOC ) ?? [];
+    internal void FFXIVify()
+    {
+        // A splitter plugin decides where the breaks fall when one is present, so
+        // what is shown here is what will actually be sent. Its lines arrive
+        // complete, header and markers included, which is why they are carried as
+        // the chunk text with nothing else set.
+        List<string>? external = Hosting.SplitterAvailable
+            ? Hosting.Split( this.ComposeFullLine() )
+            : null;
+
+        if ( external != null )
+        {
+            this._chunks = [.. external.Select( line => new TextChunk( line ) )];
+            return;
+        }
+
+        this._chunks = ChatHelper.FFXIVify( this.Header, this.ScratchString.Unwrap(), this.UseOOC ) ?? [];
+    }
+
+    /// <summary>
+    /// The label on the send button.
+    ///
+    /// With a splitter the whole message goes at once, so the label counts the
+    /// parts it will become. Without one the button still walks the pieces a press
+    /// at a time, and the label tracks which is next.
+    /// </summary>
+    private string ButtonLabel()
+    {
+        if ( Hosting.SplitterAvailable )
+        {
+            string parts = this._chunks.Count > 1 ? $" ({this._chunks.Count} parts)" : "";
+            return $"Post{parts}##ScratchPad{this.ID}";
+        }
+
+        string position = this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "";
+        return $"Copy{position}##ScratchPad{this.ID}";
+    }
+
+    /// <summary>
+    /// The pad's header and body as one chat line, the form a splitter expects.
+    /// </summary>
+    internal string ComposeFullLine()
+    {
+        string header = this.Header.ToString();
+        string body = this.ScratchString.Unwrap();
+
+        return header.Length > 0 ? $"{header} {body}" : body;
+    }
 
     /// <summary>
     /// Returns the default height of the text input.

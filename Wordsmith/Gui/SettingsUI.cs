@@ -1293,15 +1293,11 @@ internal sealed partial class SettingsUI : Window
 
             _ = ImGui.TableNextColumn();
 
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0, 0, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0.3f, 0.3f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.3f, 0.1f, 0.1f, 1f));
-
-            // Create the donation button. The link to my kofi is stored in the web manifest in case it ever changes.
-            if (ImGui.Button("Buy Me A Ko-Fi##SettingsUIBuyAKoFiButton", new(-1, Wordsmith.BUTTON_Y.Scale() ) ))
-                _ = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Wordsmith.WebManifest.Kofi) { UseShellExecute = true });
-            ImGuiExt.SetHoveredTooltip( $"This is a donation/tip button. This is absolutely not required at all.\nWhile I work hard to make Wordsmith the best I can, I do so out of passion\nand not for money. That being said, if you would like to support me then\nthank you so, so much. It's super appreciated." );
-            ImGui.PopStyleColor(3);
+            // Lady Defile's Ko-fi button used to sit here. It is on TildeTools' Credits
+            // tab instead, beside what this copy changed and a note that she does not
+            // distribute it — an appeal in someone else's plugin needs that context,
+            // and three plugins each asking separately gave none of them any. The link
+            // is still read from her web manifest rather than written down.
 
             //Skip the next column.
             _ = ImGui.TableNextColumn();
