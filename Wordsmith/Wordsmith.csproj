@@ -15,7 +15,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\images\icon.png" Link="images\icon.png" CopyToOutputDirectory="Always" />
+    <!-- The icon is left out: inside another plugin it is this author's branding shown
+         as that plugin's. mwlogo is read at runtime by the scratch pad's help window. -->
     <Content Include="..\images\mwlogo.png" Link="mwlogo.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
