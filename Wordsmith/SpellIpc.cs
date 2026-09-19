@@ -12,7 +12,7 @@ namespace Wordsmith;
 /// entries and the suggestion logic all live in this assembly. The host only needs
 /// to know the gate names.
 /// </summary>
-internal sealed class SpellIpc : System.IDisposable
+internal sealed partial class SpellIpc : System.IDisposable
 {
     private const int ApiVersion = 1;
     private const string Prefix = "TildeTools.Spell.";
@@ -69,6 +69,65 @@ internal sealed class SpellIpc : System.IDisposable
     /// <summary>Reported at most once, since a broken result repeats every frame.</summary>
     private static bool _reportedBadPosition;
 
+    /// <summary>
+    /// Where the word currently being typed starts, or the end of the text when the
+    /// last thing typed finished a word.
+    ///
+    /// Nothing from here on is marked. A word is wrong for as long as it is
+    /// incomplete — "spel" on the way to "spelling" is a misspelling by every measure
+    /// — so marking as the letters arrive means a red line under most of what is
+    /// being written, which is worse than useless. A space or a punctuation mark says
+    /// the word is finished and invites the check.
+    /// </summary>
+    private static int UnfinishedWordAt(string text)
+    {
+        if (text.Length == 0)
+            return 0;
+
+        char last = text[^1];
+
+        // The last keystroke ended a word, so everything in the line is fair game.
+        if (char.IsWhiteSpace(last) || (char.IsPunctuation(last) && last != '\'' && last != '-'))
+            return text.Length;
+
+        // Otherwise the trailing run of word characters is still under construction.
+        int start = text.Length;
+        while (start > 0 && !char.IsWhiteSpace(text[start - 1]))
+            start--;
+
+        return start;
+    }
+
+    /// <summary>
+    /// Where a leading slash command ends, or zero when the text is not one.
+    ///
+    /// "/gpose" and "/linkshell1" are not words and should not be underlined as
+    /// though the user had misspelled them. A tell's target goes the same way: a
+    /// character name and a world are nobody's spelling mistake.
+    /// </summary>
+    private static int CommandEndsAt(string text)
+    {
+        if (text.Length == 0 || text[0] != '/')
+            return 0;
+
+        int end = text.IndexOf(' ');
+        if (end < 0)
+            return text.Length;
+
+        // Skip past the name and world too, which is the next word after a tell.
+        if (TellRegex().IsMatch(text))
+        {
+            int target = text.IndexOf(' ', end + 1);
+            if (target > 0)
+                return target;
+        }
+
+        return end;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^/(tell|t|w|whisper|send)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex TellRegex();
+
     private static List<int> Check(string text)
     {
         var positions = new List<int>();
@@ -82,8 +141,20 @@ internal sealed class SpellIpc : System.IDisposable
 
             var found = SpellChecker.CheckString(text);
 
+            int unfinished = UnfinishedWordAt(text);
+            int commandEnds = CommandEndsAt(text);
+
             foreach (var word in found)
             {
+                // Still being typed. Every word is a misspelling until it is finished,
+                // and marking one letter at a time is noise rather than help.
+                if (word.WordIndex >= unfinished)
+                    continue;
+
+                // The command itself is not English and is not the user's to spell.
+                if (word.WordIndex < commandEnds)
+                    continue;
+
                 if (word.WordIndex < 0 || word.WordLength < 1)
                 {
                     if (!_reportedBadPosition)
