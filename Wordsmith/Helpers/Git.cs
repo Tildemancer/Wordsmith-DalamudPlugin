@@ -15,8 +15,9 @@ internal sealed class Git
         using ( HttpClient client = new() )
         {
             int tries = 3;
-            // Same as below: asking for anything modified since this instant gets
-            // "not modified" back, which throws. Ask not to serve from cache.
+            // TildeTools
+            // Same deal as the one below. Ask for anything modified since right now
+            // and the server says "not modified", which throws. Ask for no cache.
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             while ( tries-- > 0 )
             {
@@ -54,11 +55,13 @@ internal sealed class Git
         string result = "";
         using ( HttpClient client = new() )
         {
-            // Asking for anything modified since this instant is a request the
-            // server answers with "not modified", which is not a success code and
-            // so throws. It was meant to force a refresh; it guaranteed a failed
-            // first attempt and a warning in the log on every startup. Saying not
-            // to serve from cache is the header that actually does that.
+            // TildeTools
+            // Turns out asking for anything modified since right now isn't a refresh,
+            // it's a question the server answers with "not modified". Which isn't a
+            // success code, so it throws. Meant to force a fresh copy, actually
+            // guaranteed a failed first attempt and a warning in the log on every
+            // single startup. Oops. Saying don't serve this from cache is the header
+            // that does what was wanted.
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             int tries = 3;
             while ( tries-- > 0 )

@@ -1235,10 +1235,10 @@ internal sealed class ScratchPadUI : Window
             if ( this._chunks.Count == 0 )
                 return;
 
-            // With a splitter present the button sends rather than fills the
-            // clipboard, and sends the whole message at once: it paces the parts
-            // itself, so walking them one press at a time is the very thing it
-            // removes the need for.
+            // TildeTools
+            // If a splitter's around the button sends instead of filling the
+            // clipboard, and it sends the whole thing in one go. It paces the parts
+            // itself, so there's no point walking them a press at a time any more.
             if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine() ) )
             {
                 if ( Wordsmith.Configuration.TrackWordStatistics )
@@ -1665,6 +1665,7 @@ internal sealed class ScratchPadUI : Window
     /// <returns>A <see cref="string"/> with all relevant data.</returns>
     private static string CreateCompleteTextChunk( TextChunk chunk, bool OOC, int index, int count )
     {
+        // TildeTools
         // A line from an external splitter already carries its header, markers and
         // tags. Building Wordsmith's on top would put two of each on every line.
         if ( Hosting.SplitterAvailable )
@@ -1746,10 +1747,11 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     internal void FFXIVify()
     {
-        // A splitter plugin decides where the breaks fall when one is present, so
-        // what is shown here is what will actually be sent. Its lines arrive
-        // complete, header and markers included, which is why they are carried as
-        // the chunk text with nothing else set.
+        // TildeTools
+        // When there's a splitter it decides where the breaks fall, so the preview
+        // here matches what actually goes out. Its lines come back complete, header
+        // and markers and all, so they just go in as the chunk text and nothing else
+        // gets set.
         List<string>? external = Hosting.SplitterAvailable
             ? Hosting.Split( this.ComposeFullLine() )
             : null;

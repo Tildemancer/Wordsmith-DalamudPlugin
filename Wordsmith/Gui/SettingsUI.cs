@@ -1293,11 +1293,13 @@ internal sealed partial class SettingsUI : Window
 
             _ = ImGui.TableNextColumn();
 
-            // Lady Defile's Ko-fi button used to sit here. It is on TildeTools' Credits
-            // tab instead, beside what this copy changed and a note that she does not
-            // distribute it. An appeal in someone else's plugin needs that context,
-            // and three plugins each asking separately gave none of them any. The link
-            // is still read from her web manifest rather than written down.
+            // TildeTools
+            // Lady Defile's Ko-fi button used to live here. It's over on TildeTools'
+            // Credits tab now, next to what this copy changed and a note that she
+            // doesn't distribute it. Asking for someone's donations from inside
+            // someone else's plugin needs that context, and three plugins each asking
+            // on their own gave none of them any. The link still comes out of her web
+            // manifest rather than being written down.
 
             //Skip the next column.
             _ = ImGui.TableNextColumn();

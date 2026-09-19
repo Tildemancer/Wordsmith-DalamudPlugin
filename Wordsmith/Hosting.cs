@@ -1,3 +1,5 @@
+// TildeTools: written for this fork, not part of upstream Wordsmith.
+
 using System.Collections.Generic;
 using System.Reflection;
 using Dalamud.Plugin.Ipc;
@@ -7,37 +9,34 @@ using Newtonsoft.Json.Serialization;
 namespace Wordsmith;
 
 /// <summary>
-/// How Wordsmith behaves when it is not the only thing running: where it keeps its
-/// settings, and who breaks up the lines it sends.
+/// The bits that change when Wordsmith is not running on its own. Where its settings
+/// live, and who breaks up the lines it sends.
 /// </summary>
 public static class Hosting
 {
     #region Settings file
 
-    /// <summary>Wordsmith's own settings file, beside every other plugin's.</summary>
     private const string ConfigFileName = "Wordsmith.json";
 
     private static bool _hosted;
 
-    /// <summary>True when Wordsmith is running inside another plugin.</summary>
     internal static bool IsHosted => _hosted;
 
     /// <summary>
     /// Keeps settings in Wordsmith's own file rather than the host's.
     ///
-    /// Dalamud writes plugin settings to whichever plugin asked, and a hosted copy
-    /// asks with the HOST's interface. So saving through Dalamud puts Wordsmith's
-    /// settings in the host's file and wipes out whatever the host had there.
+    /// Dalamud writes plugin settings to whichever plugin asked, and a
+    /// hosted copy asks with the host's interface. So saving through Dalamud puts
+    /// Wordsmith's settings in the host's file and wipes out whatever the host had
+    /// there.
     ///
-    /// MUST be called before the plugin is constructed: the settings are read on
+    /// MUST be called before the plugin is constructed. The settings get read on
     /// the way up.
     /// </summary>
     public static void HostInOwnFile() => _hosted = true;
 
-    /// <summary>Where the settings live once the plugin is running.</summary>
     private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
 
-    /// <summary>Wordsmith's settings file, in the same folder as the given one.</summary>
     private static string PathBeside(FileInfo other)
     {
         DirectoryInfo directory = other.Directory
@@ -46,7 +45,7 @@ public static class Hosting
         return Path.Combine(directory.FullName, ConfigFileName);
     }
 
-    /// <summary>Matches how Dalamud writes plugin settings; stored objects carry a "$type".</summary>
+    /// <summary>Matches how Dalamud writes plugin settings. Stored objects carry a "$type".</summary>
     private static readonly JsonSerializerSettings SerializerSettings = new()
     {
         TypeNameHandling = TypeNameHandling.Objects,
@@ -65,8 +64,8 @@ public static class Hosting
 
         public override Type BindToType(string? assemblyName, string typeName)
         {
-            // Resolve the whole name, not our assembly first: a runtime generic
-            // can have our types as its arguments.
+            // Resolve the whole name, not our assembly first. A runtime generic can
+            // have our types as its arguments.
             string qualified = assemblyName == null ? typeName : $"{typeName}, {assemblyName}";
 
             Type? resolved = Type.GetType(qualified, ResolveAssembly, ResolveType, throwOnError: false);
@@ -90,7 +89,7 @@ public static class Hosting
     /// <summary>Settings existed but could not be read. Saving is refused so defaults NEVER overwrite them.</summary>
     private static bool _loadFailed;
 
-    /// <summary>Reads the settings. When hosted, Dalamud would hand back the HOST's settings object.</summary>
+    /// <summary>Reads the settings. When hosted, Dalamud would hand back the host's settings object.</summary>
     internal static Configuration LoadConfig()
     {
         if (!_hosted)
@@ -122,7 +121,6 @@ public static class Hosting
         return new Configuration();
     }
 
-    /// <summary>Writes the settings back to wherever they were read from.</summary>
     internal static void SaveConfig(Configuration config)
     {
         if (!_hosted)
@@ -149,12 +147,12 @@ public static class Hosting
         }
     }
 
-    /// <summary>Writes settings to a file, leaving no half-written file behind on failure.</summary>
+    /// <summary>Writes settings to a file, leaving no half-written one behind if it fails.</summary>
     private static void Write(string path, Configuration config)
     {
         string json = JsonConvert.SerializeObject(config, Formatting.Indented, SerializerSettings);
 
-        // Write beside the target and move into place: a failed write leaves no half-file.
+        // Write beside the target, then move it into place.
         string temporary = path + ".tmp";
         File.WriteAllText(temporary, json);
 
@@ -181,17 +179,17 @@ public static class Hosting
     /// Takes back settings that an earlier version saved into the host's own file.
     ///
     /// Before <see cref="HostInOwnFile"/> existed, a hosted Wordsmith went through
-    /// Dalamud, which reads and writes whichever plugin asked. So it read the HOST's
-    /// settings, failed to make them ours, and started from defaults; then it saved
-    /// those defaults over the host's file. Everything the user had tuned was still
-    /// sitting safely in Wordsmith's own file, untouched.
+    /// Dalamud, which reads and writes whichever plugin asked. So it read the host's
+    /// settings, failed to make them ours, and started from defaults, then saved
+    /// those defaults over the host's file. Oops. Everything the user had tuned was
+    /// still sitting safely in Wordsmith's own file, untouched.
     ///
-    /// Which is why a settings file of our own always wins: it holds real settings,
-    /// where the host's file holds defaults and at most a few days of changes made
-    /// while this was broken. Those are set aside rather than thrown away.
+    /// So a settings file of our own always wins. It holds real settings, where the
+    /// host's file holds defaults plus at most a few days of changes made while this
+    /// was broken. Those get set aside rather than thrown away.
     ///
-    /// Called before Wordsmith itself is running, so it must not touch anything
-    /// Dalamud fills in later. Throws rather than logs, for the same reason.
+    /// Runs before Wordsmith itself is up, so it must not touch anything Dalamud
+    /// fills in later. Throws rather than logs, for the same reason.
     /// </summary>
     /// <param name="hostConfigFile">The host plugin's own settings file.</param>
     /// <param name="path">Where the settings ended up, when there were any.</param>
@@ -215,7 +213,7 @@ public static class Hosting
         if (File.Exists(mine))
         {
             // Kept whole and unread, so whatever was changed in the meantime can still
-            // be fished out by hand. Written once and never again: going back to an
+            // be fished out by hand. Written once and never again. Going back to an
             // affected version would fill the host's file with plain defaults, and
             // those must not replace the copy taken here.
             string aside = mine + ".hosted";
@@ -242,14 +240,14 @@ public static class Hosting
 
     // Optional cooperation with a plugin that splits and sends chat messages.
     //
-    // Wordsmith breaks text into pieces for copying out by hand, one at a time. Where
-    // a splitter is present it can do the breaking up and the sending, so the button
+    // Wordsmith breaks text into pieces for copying out by hand, one at a time. If a
+    // splitter is around it can do the breaking up and the sending, so the button
     // sends the whole thing instead of filling the clipboard piece by piece.
     //
-    // The splitter becomes the authority on where the breaks fall, so the pieces shown
-    // on screen are the ones that will actually be sent. Its markers and tags come
-    // with it, which is why Wordsmith's own are left off while it is in charge. Two
-    // sets would end up on every line.
+    // The splitter gets the last word on where the breaks fall, so the pieces shown on
+    // screen are the ones that will actually be sent. Its markers and tags come along
+    // with it, so Wordsmith's own are left off while it is in charge. Otherwise every
+    // line ends up wearing two sets.
     //
     // Every call falls back to Wordsmith's own behaviour, so with no splitter
     // installed nothing here changes anything.
@@ -260,7 +258,6 @@ public static class Hosting
     private static ICallGateSubscriber<string, int, List<string>>? _splitLine;
     private static ICallGateSubscriber<string, int, bool>? _sendLine;
 
-    /// <summary>Set up the gates once the plugin interface is available.</summary>
     internal static void Initialise()
     {
         _apiVersion = Wordsmith.PluginInterface.GetIpcSubscriber<int>("TildeTools.Split.ApiVersion");

@@ -134,9 +134,12 @@ public sealed class Wordsmith : IDalamudPlugin
         // Get the configuration.
         Configuration = Hosting.LoadConfig();
 
-        // Look for a splitter plugin; absent one, everything below behaves as before.
+        // TildeTools
+        // Go looking for a splitter plugin. Without one, everything below behaves
+        // exactly like it did before.
         Hosting.Initialise();
 
+        // TildeTools
         // Offer the spellchecker to other plugins.
         _spellIpc = new SpellIpc();
 
@@ -154,11 +157,12 @@ public sealed class Wordsmith : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi += WordsmithUI.ShowScratchPad;
 
 
-        // Fetched off the drawing thread, because it is three HTTP attempts against a
-        // remote host with a blocking .Result on each. Done here, the game froze for
-        // however long the network took, and for a timeout if the host was down.
-        // Nothing needs it immediately: it supplies the donation link and the list of
-        // downloadable dictionaries, both read long after startup.
+        // TildeTools
+        // Off the drawing thread, this one. It's three HTTP attempts at a remote host
+        // with a blocking .Result on each, so doing it inline froze the game for
+        // however long the network felt like taking, or for a whole timeout if the
+        // host was down. Nothing needs it straight away anyway. It's the donation link
+        // and the list of downloadable dictionaries, both read long after startup.
         WebManifest = new();
         _ = System.Threading.Tasks.Task.Run( () =>
         {
@@ -204,9 +208,10 @@ public sealed class Wordsmith : IDalamudPlugin
         // Dispose of the UI
         WordsmithUI.Dispose();
 
-        // Let the dictionaries go. They are static, so inside a host plugin they would
-        // otherwise outlive the module being switched off. Twenty-odd megabytes kept
-        // for something that is not running.
+        // TildeTools
+        // Let the dictionaries go. They're static, so inside a host plugin they'd
+        // happily outlive the module being switched off. Twenty-odd megabytes sat
+        // there for something that isn't even running.
         Lang.Unload();
     }
 

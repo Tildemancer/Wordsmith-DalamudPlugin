@@ -1,3 +1,5 @@
+// TildeTools: written for this fork, not part of upstream Wordsmith.
+
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Plugin.Ipc;
@@ -36,7 +38,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         _available.SendMessage();
     }
 
-    /// <summary>Reported ONCE, not on every keystroke.</summary>
+    /// <summary>Reported once, not on every keystroke.</summary>
     private static bool _reportedState;
 
     private static void ReportState()
@@ -49,7 +51,7 @@ internal sealed partial class SpellIpc : System.IDisposable
             $"Spellcheck: answering with {Lang.WordCount} words loaded, enabled: {Lang.Enabled}.");
     }
 
-    /// <summary>Reported once; a broken result repeats every frame. Yikes!</summary>
+    /// <summary>Reported once; a broken result repeats every frame.</summary>
     private static bool _reportedBadPosition;
 
     /// <summary>
@@ -99,7 +101,7 @@ internal sealed partial class SpellIpc : System.IDisposable
     private static partial System.Text.RegularExpressions.Regex TellRegex();
 
     /// <summary>
-    /// Finds the misspelled words in a string. Positions come back FLATTENED:
+    /// Finds the misspelled words in a string. Positions come back flattened:
     /// start, length, start, length.
     /// </summary>
     private static List<int> Check(string text)
