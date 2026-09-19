@@ -5,13 +5,7 @@ using Wordsmith.Helpers;
 
 namespace Wordsmith;
 
-/// <summary>
-/// Offers Wordsmith's spellchecker to other plugins.
-///
-/// Registered here rather than by the host because the dictionary, its custom
-/// entries and the suggestion logic all live in this assembly. The host only needs
-/// to know the gate names.
-/// </summary>
+/// <summary>Offers Wordsmith's spellchecker to other plugins.</summary>
 internal sealed partial class SpellIpc : System.IDisposable
 {
     private const int ApiVersion = 1;
@@ -42,18 +36,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         _available.SendMessage();
     }
 
-    /// <summary>
-    /// Finds the misspelled words in a string.
-    ///
-    /// Returns their positions flattened into pairs — start, length, start, length
-    /// — because a list of numbers crosses between plugins without either side
-    /// needing a shared type. An empty list means nothing was found, or that no
-    /// dictionary is loaded.
-    /// </summary>
-    /// <summary>
-    /// Whether the dictionary's state has been reported, so a check that silently
-    /// finds nothing explains itself once instead of on every keystroke.
-    /// </summary>
+    /// <summary>Reported at most once, not on every keystroke.</summary>
     private static bool _reportedState;
 
     private static void ReportState()
@@ -71,13 +54,7 @@ internal sealed partial class SpellIpc : System.IDisposable
 
     /// <summary>
     /// Where the word currently being typed starts, or the end of the text when the
-    /// last thing typed finished a word.
-    ///
-    /// Nothing from here on is marked. A word is wrong for as long as it is
-    /// incomplete — "spel" on the way to "spelling" is a misspelling by every measure
-    /// — so marking as the letters arrive means a red line under most of what is
-    /// being written, which is worse than useless. A space or a punctuation mark says
-    /// the word is finished and invites the check.
+    /// last keystroke finished a word. Nothing from here on is marked.
     /// </summary>
     private static int UnfinishedWordAt(string text)
     {
@@ -86,11 +63,10 @@ internal sealed partial class SpellIpc : System.IDisposable
 
         char last = text[^1];
 
-        // The last keystroke ended a word, so everything in the line is fair game.
+        // Apostrophe and hyphen stay inside a word.
         if (char.IsWhiteSpace(last) || (char.IsPunctuation(last) && last != '\'' && last != '-'))
             return text.Length;
 
-        // Otherwise the trailing run of word characters is still under construction.
         int start = text.Length;
         while (start > 0 && !char.IsWhiteSpace(text[start - 1]))
             start--;
@@ -98,13 +74,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         return start;
     }
 
-    /// <summary>
-    /// Where a leading slash command ends, or zero when the text is not one.
-    ///
-    /// "/gpose" and "/linkshell1" are not words and should not be underlined as
-    /// though the user had misspelled them. A tell's target goes the same way: a
-    /// character name and a world are nobody's spelling mistake.
-    /// </summary>
+    /// <summary>Where a leading slash command ends, or zero when the text is not one.</summary>
     private static int CommandEndsAt(string text)
     {
         if (text.Length == 0 || text[0] != '/')
@@ -114,7 +84,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         if (end < 0)
             return text.Length;
 
-        // Skip past the name and world too, which is the next word after a tell.
+        // A tell's target is the next word; skip that too.
         if (TellRegex().IsMatch(text))
         {
             int target = text.IndexOf(' ', end + 1);
@@ -128,6 +98,10 @@ internal sealed partial class SpellIpc : System.IDisposable
     [System.Text.RegularExpressions.GeneratedRegex(@"^/(tell|t|w|whisper|send)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex TellRegex();
 
+    /// <summary>
+    /// Finds the misspelled words in a string. Positions are flattened into pairs:
+    /// start, length, start, length.
+    /// </summary>
     private static List<int> Check(string text)
     {
         var positions = new List<int>();
@@ -146,12 +120,10 @@ internal sealed partial class SpellIpc : System.IDisposable
 
             foreach (var word in found)
             {
-                // Still being typed. Every word is a misspelling until it is finished,
-                // and marking one letter at a time is noise rather than help.
+                // Still being typed.
                 if (word.WordIndex >= unfinished)
                     continue;
 
-                // The command itself is not English and is not the user's to spell.
                 if (word.WordIndex < commandEnds)
                     continue;
 
@@ -209,13 +181,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         }
     }
 
-    /// <summary>
-    /// Leaves a word alone for the rest of the session without learning it.
-    ///
-    /// Kept here beside the dictionary rather than in each caller, so every text
-    /// box that checks spelling agrees about which words are being overlooked —
-    /// including Wordsmith's own pad.
-    /// </summary>
+    /// <summary>Leaves a word alone for the rest of the session without learning it.</summary>
     private static bool IgnoreWord(string word)
     {
         try

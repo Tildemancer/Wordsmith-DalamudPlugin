@@ -6,17 +6,7 @@ using WeCantSpell.Hunspell;
 namespace Wordsmith.Helpers;
 
 /// <summary>
-/// The dictionary and the suggestions drawn from it.
-///
-/// This is Hunspell — the checker behind Chrome, Firefox and LibreOffice — reading
-/// the same affix-compressed dictionaries they do. An affix dictionary stores root
-/// words plus rules for the forms built from them, so it knows that "reworked"
-/// follows from "work" without listing it, and a suggestion can be built by
-/// applying those rules in reverse.
-///
-/// It replaced a flat word list whose suggestions were generated four ways and
-/// returned in the order the generators happened to emit them, with nothing scoring
-/// or ranking the results. That is why "mispelled" used to suggest "dispelled".
+/// The dictionary and the suggestions drawn from it, backed by Hunspell.
 /// </summary>
 public static partial class Lang
 {
@@ -24,36 +14,19 @@ public static partial class Lang
     private static WordList? _hunspell;
 
     /// <summary>
-    /// The other English dictionary, accepted alongside the first.
-    ///
-    /// The game's own English is British — armour, realise, harbour — while most
-    /// players type American, and a roleplayer switching between them is not making
-    /// a mistake worth marking. Both spellings are accepted, and both are offered
-    /// when suggesting, so neither is treated as the wrong one.
+    /// The other English dictionary (US vs GB), accepted and suggested alongside the first.
     /// </summary>
     private static WordList? _alternate;
 
-    /// <summary>
-    /// The flat word list, used only when no affix dictionary can be found.
-    ///
-    /// This is the old engine, kept as a fallback so a missing dictionary file
-    /// leaves spellchecking degraded rather than absent.
-    /// </summary>
+    /// <summary>The flat word list, used only when no affix dictionary can be found.</summary>
     private static readonly HashSet<string> _dictionary = [];
 
-    /// <summary>
-    /// Words the user has taught it, held apart from the dictionary so they survive
-    /// a reload and can be taken back out again.
-    /// </summary>
+    /// <summary>Words the user has taught it, held apart so they survive a reload.</summary>
     private static readonly HashSet<string> _custom = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Names supplied from outside, such as the game's own places and characters.
-    ///
-    /// No English dictionary contains Thanalan or Y'shtola, and a roleplayer writes
-    /// little else. These are kept apart from the user's own additions so they are
-    /// never written into the configuration and never listed as words to remove;
-    /// whoever supplies them owns them, and they arrive again on the next load.
+    /// Names supplied from outside, such as the game's own places and characters. Kept
+    /// apart from the user's own additions: never saved, never listed as removable.
     /// </summary>
     private static readonly HashSet<string> _supplementary = new(StringComparer.OrdinalIgnoreCase);
 
@@ -67,25 +40,12 @@ public static partial class Lang
         }
     }
 
-    /// <summary>
-    /// Guards the dictionary while names are being added to it.
-    ///
-    /// They arrive on a background thread and the text being typed is checked on the
-    /// drawing one, so without this the dictionary would be read while it was being
-    /// written to.
-    /// </summary>
+    /// <summary>Guards the dictionary: names arrive on a background thread, checks run on the drawing one.</summary>
     private static readonly object _sync = new();
 
     /// <summary>
     /// Accepts a set of names as correctly spelled, and as words worth suggesting.
-    ///
-    /// They go into the dictionary itself rather than beside it, so a near miss finds
-    /// them: "Gridani" offers "Gridania" only because the dictionary has heard of it.
-    /// The separate set is kept as well, since a name entered this way is matched by
-    /// the dictionary only as it was capitalised.
-    ///
-    /// Safe to call before or after the dictionary loads. Anything added early is
-    /// still accepted, and is folded into the dictionary when one arrives.
+    /// Safe to call before the dictionary loads; early additions are folded in later.
     /// </summary>
     public static void AddSupplementaryWords(IEnumerable<string> words)
     {
@@ -97,12 +57,10 @@ public static partial class Lang
             if ( trimmed.Length < 2 )
                 continue;
 
-            // Added to the set inside Absorb, under the lock. Adding it here instead
-            // would write the set from this thread while the drawing thread reads it.
+            // Added to the set inside Absorb, under the lock.
             batch.Add( trimmed );
 
-            // Handed over a little at a time, so the drawing thread is never kept
-            // waiting on the whole set.
+            // Handed over in batches so the drawing thread never waits on the whole set.
             if ( batch.Count >= 512 )
                 Absorb( batch );
         }
@@ -122,9 +80,7 @@ public static partial class Lang
             {
                 _ = _supplementary.Add( word );
 
-                // Not tracked as ours to remove: a game name is never the user's to
-                // unlearn, so tracking tens of thousands of them only retains strings
-                // nothing can act on.
+                // Not tracked as ours to remove: a game name is never the user's to unlearn.
                 Introduce( word, track: false );
             }
         }
@@ -132,18 +88,12 @@ public static partial class Lang
         batch.Clear();
     }
 
-    /// <summary>
-    /// Words this added to the dictionary, which are therefore its to take back out.
-    /// </summary>
+    /// <summary>Words this added to the dictionary, which are therefore its to take back out.</summary>
     private static readonly HashSet<string> _inserted = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Adds a word the dictionary does not already have.
-    ///
-    /// The check matters: adding a word it knows gives it a second entry for that
-    /// word, and removing one of those removes both — so learning "colour" and then
-    /// unlearning it would take the real "colour" with it, and every form built from
-    /// it. Caller must hold <see cref="_sync"/>.
+    /// Adds a word the dictionary does not already have. The Check is required: a duplicate
+    /// entry means unlearning it later removes the real word too. Caller must hold <see cref="_sync"/>.
     /// </summary>
     private static void Introduce(string word, bool track = true)
     {
@@ -154,12 +104,7 @@ public static partial class Lang
             _ = _inserted.Add( word );
     }
 
-    /// <summary>
-    /// Puts the names collected so far into a dictionary that has just loaded.
-    ///
-    /// Without this, names supplied while the dictionary was still being read would
-    /// be accepted but never suggested.
-    /// </summary>
+    /// <summary>Puts the names collected so far into a dictionary that has just loaded.</summary>
     private static void AbsorbSupplementary()
     {
         lock ( _sync )
@@ -173,12 +118,8 @@ public static partial class Lang
     }
 
     /// <summary>
-    /// Releases the dictionaries and everything gathered alongside them.
-    ///
-    /// These are static, so within a host plugin they outlive the module unless it
-    /// says so: switching Wordsmith off would leave both Hunspell dictionaries and
-    /// every game name resident for something no longer running. Supplied names are
-    /// dropped too, since whoever supplied them hands them over again on the next load.
+    /// Releases the dictionaries and everything gathered alongside them. Static state
+    /// outlives the module inside a host plugin, so it must be dropped by hand.
     /// </summary>
     public static void Unload()
     {
@@ -210,9 +151,7 @@ public static partial class Lang
     /// <summary>Whether the real affix dictionary is in use, rather than the fallback list.</summary>
     public static bool UsingAffixDictionary => _hunspell is not null;
 
-    /// <summary>
-    /// Active becomes true after Init() has successfully loaded a language file.
-    /// </summary>
+    /// <summary>True once Init() has loaded a language file.</summary>
     public static bool Enabled
     {
         get => field; set => field = value;
@@ -235,10 +174,7 @@ public static partial class Lang
     {
         string trimmed = key.Trim();
 
-        // One lock for the whole lookup. Every set below is written by a background
-        // thread — the vocabulary loader, or a word added from another plugin — while
-        // this runs on the drawing thread, and a HashSet read during a write can throw
-        // or silently miss.
+        // One lock for the whole lookup; every set below can be written from a background thread.
         lock (_sync)
         {
             if (_custom.Contains(trimmed) || _supplementary.Contains(trimmed) || _ignored.Contains(trimmed))
@@ -250,18 +186,12 @@ public static partial class Lang
             return Known(_hunspell) || Known(_alternate);
         }
 
-        // Tried as written first, because capitalisation is meaningful to an affix
-        // dictionary: it knows "Paris" is a word and "paris" is not. Folding the case
-        // afterwards keeps a sentence's first word from being flagged for it.
+        // As written first: capitalisation is meaningful to an affix dictionary ("Paris" vs "paris").
         bool Known(WordList? list) =>
             list is not null && (list.Check(key) || (lowercase && list.Check(key.ToLower())));
     }
 
-    /// <summary>
-    /// Words to leave alone for now without learning them: a name, a bit of slang,
-    /// something spelled oddly on purpose. Cleared when the game restarts, which is
-    /// what separates it from adding to the dictionary.
-    /// </summary>
+    /// <summary>Words left alone without learning them. Cleared on restart.</summary>
     private static readonly HashSet<string> _ignored = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Stops flagging a word for the rest of the session.</summary>
@@ -291,19 +221,14 @@ public static partial class Lang
 
     private static void ValidateAndAddWord(string candidate)
     {
-        // Split and trim the candidate into all possible words. This should break entries with multiple words into single entries.
+        // A candidate entry may hold several words.
         string[] splits = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (string s in splits)
             _ = _dictionary.Add(s.ToLower());
     }
 
-    /// <summary>
-    /// Takes one of the user's own entries, which may hold several words.
-    ///
-    /// These go to the custom list rather than into the dictionary, so they are the
-    /// same words whichever dictionary is loaded underneath them.
-    /// </summary>
+    /// <summary>Takes one of the user's own entries, which may hold several words.</summary>
     private static void AddCustomWord(string candidate)
     {
         foreach (string s in candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -312,8 +237,7 @@ public static partial class Lang
             {
                 _ = _custom.Add(s);
 
-                // Also a word the dictionary should be able to suggest, not merely one
-                // it stops marking.
+                // Also into the dictionary, so it can be suggested and not merely accepted.
                 Introduce(s);
             }
         }
@@ -323,7 +247,6 @@ public static partial class Lang
     {
         Match m = DictionaryFileRegex().Match( Wordsmith.Configuration.DictionaryFile );
 
-        // If the configuration does not have a web or local setting, set to default.
         if ( !m.Success )
         {
             Wordsmith.Configuration.DictionaryFile = "web: lang_en";
@@ -331,9 +254,7 @@ public static partial class Lang
         }
     }
 
-    /// <summary>
-    /// Load the language file and enable spell checks.
-    /// </summary>
+    /// <summary>Load the language file and enable spell checks.</summary>
     public static void Init() => Init(false);
 
     private static void Init(bool notify)
@@ -341,22 +262,17 @@ public static partial class Lang
         ValidateConfiguration();
         _dictionary.Clear();
 
-        // Validate the entry in the configuration
-
         Task t = new(() =>
         {
-            // The affix dictionary first: it is the one that knows word forms and can
-            // rank its suggestions. The flat lists below are the fallback.
+            // Affix dictionary first; the flat lists are the fallback.
             bool loaded = LoadAffixDictionary();
 
             if ( !loaded )
                 loaded = LoadWebLanguage();
 
-            // If web loading failed, load the file
             if ( !loaded )
                 loaded = LoadLanguageFile();
 
-            // If both failed to load then present the failure notification
             if (!loaded)
             {
                 _ =  Wordsmith.NotificationManager.AddNotification(new()
@@ -369,7 +285,6 @@ public static partial class Lang
             }
             else
             {
-                // Add all of the custom dictionary entries to the dictionary
                 foreach (string word in Wordsmith.Configuration.CustomDictionaryEntries)
                     AddCustomWord(word);
 
@@ -396,11 +311,8 @@ public static partial class Lang
     public static void Reinit() => Init(true);
 
     /// <summary>
-    /// Loads a Hunspell dictionary pair shipped beside the plugin.
-    ///
-    /// Which pair is chosen follows the existing dictionary setting, so "web: lang_en"
-    /// and "local: lang_en" both land on en_US; anything naming GB, UK or British
-    /// takes en_GB. A setting that matches nothing leaves this to the flat lists.
+    /// Loads a Hunspell dictionary pair shipped beside the plugin, chosen from the
+    /// existing dictionary setting: en_GB when it names GB, UK or British, else en_US.
     /// </summary>
     private static bool LoadAffixDictionary()
     {
@@ -416,11 +328,8 @@ public static partial class Lang
 
             _alternate = LoadPair( directory, other );
 
-            // Names may have been supplied while this was still reading. Caught on its
-            // own, because a dictionary that loaded is worth keeping even if folding
-            // the names into it fails: letting that failure reach the handler below
-            // would throw away a working dictionary and drop silently back to the flat
-            // word list, with nothing but a log line to say the engine had changed.
+            // Caught separately: a loaded dictionary is worth keeping even if folding
+            // the supplied names into it fails.
             try
             {
                 AbsorbSupplementary();
@@ -459,11 +368,8 @@ public static partial class Lang
     }
 
     /// <summary>
-    /// Where the bundled dictionaries sit.
-    ///
-    /// Taken from this assembly rather than from the plugin interface, because when
-    /// Wordsmith runs inside another plugin the interface reports that host's folder
-    /// and the files travel with this assembly.
+    /// Where the bundled dictionaries sit. Taken from this assembly, not the plugin
+    /// interface, which reports the host's folder when Wordsmith runs inside one.
     /// </summary>
     private static string DictionaryDirectory()
     {
@@ -494,14 +400,11 @@ public static partial class Lang
 
         string title = m.Groups[1].Value;
 
-        // If the dictionary isn't in the manifest the user may have a custom dictionary
-        // file that they prefer to use. Check for its existence here.
         if ( !Wordsmith.WebManifest.IsLoaded || !Wordsmith.WebManifest.Dictionaries.Contains(title) )
             return false;
 
         try
         {
-            // Load the dictionary array
             string[] lines = Git.LoadDictionary(title);
             if ( lines.Length == 0 )
                 throw new Exception();
@@ -529,9 +432,7 @@ public static partial class Lang
         }
     }
 
-    /// <summary>
-    /// Loads the specified language file.
-    /// </summary>
+    /// <summary>Loads the specified language file.</summary>
     private static bool LoadLanguageFile()
     {
         Match m = LocalDictionaryRegex().Match( Wordsmith.Configuration.DictionaryFile );
@@ -543,19 +444,15 @@ public static partial class Lang
 
         string title = m.Groups[1].Value;
 
-        // Get the filepath of the dictionary file
         string filepath = Path.Combine(Wordsmith.PluginInterface.AssemblyLocation.Directory?.FullName!, $"Dictionaries\\{title}"); // Wordsmith.Configuration.DictionaryFile.Replace($"local: ", "")}");
 
-        // If the file doesn't exist then abort
         if (!File.Exists(filepath))
             return false;
 
         try
         {
-            // Read the content to an array.
             string[] lines = File.ReadAllLines(filepath);
 
-            // Iterate over each word and add it to the dictionary
             foreach( string l in lines )
             {
                 if( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
@@ -571,9 +468,7 @@ public static partial class Lang
         return false;
     }
 
-    /// <summary>
-    /// Attempts to add a word to the custom dictionary.
-    /// </summary>
+    /// <summary>Attempts to add a word to the custom dictionary.</summary>
     /// <param name="word">String to search.</param>
     /// <returns><see langword="true"/> if the word was not in the dictionary already.</returns>
     public static bool AddDictionaryEntry(string word)
@@ -592,16 +487,13 @@ public static partial class Lang
             Introduce( trimmed );
         }
 
-        // Kept as typed rather than folded down, so a name added as "Ashwood" is
-        // remembered that way. The lookup ignores case either way.
+        // Stored as typed; the lookup ignores case either way.
         Wordsmith.Configuration.CustomDictionaryEntries.Add( trimmed );
         Wordsmith.Configuration.Save();
         return true;
     }
 
-    /// <summary>
-    /// Attempt to remove a word from the custom dictionary
-    /// </summary>
+    /// <summary>Attempt to remove a word from the custom dictionary.</summary>
     /// <param name="word">String to remove</param>
     public static void RemoveDictionaryEntry(string word)
     {
@@ -613,8 +505,6 @@ public static partial class Lang
             _ = _dictionary.Remove( trimmed.ToLower() );
 
             // Only a word this put into the dictionary is this one's to take back out.
-            // A real word was never ours, and a name from the game's own data is not
-            // the user's to remove.
             if ( _inserted.Remove( trimmed ) && !_supplementary.Contains( trimmed ) )
                 _ = _hunspell?.Remove( trimmed );
         }
@@ -625,14 +515,7 @@ public static partial class Lang
         Wordsmith.Configuration.Save();
     }
 
-    /// <summary>
-    /// Words that might have been meant instead, best first.
-    ///
-    /// Hunspell ranks what it generates: it scores candidates by how far they are
-    /// from what was typed, weighs a known confusion of letters above an arbitrary
-    /// one, and sorts before cutting the list. The old engine did none of that, which
-    /// is why its answers were as good as the order its generators ran in.
-    /// </summary>
+    /// <summary>Words that might have been meant instead, best first.</summary>
     internal static IReadOnlyList<string> GetSuggestions(string word)
     {
         if ( word.Length == 0 )
@@ -642,8 +525,7 @@ public static partial class Lang
         {
             try
             {
-                // Held throughout, because Suggest walks the dictionary as it goes and
-                // names may still be arriving on another thread.
+                // Held throughout: Suggest walks the dictionary as it goes.
                 lock ( _sync )
                     return Interleave(
                         _hunspell.Suggest( word ),
@@ -661,12 +543,8 @@ public static partial class Lang
     }
 
     /// <summary>
-    /// Merges two ranked lists by taking from each in turn.
-    ///
-    /// Each dictionary has already sorted its own answers by how likely they are, and
-    /// there is no common scale to sort them against each other on. Alternating keeps
-    /// both first choices near the top, which for a misspelling that differs between
-    /// the two spellings is the pair of words actually worth offering.
+    /// Merges two ranked lists by taking from each in turn. They are sorted on separate
+    /// scales, so alternating is what keeps both first choices near the top.
     /// </summary>
     private static IReadOnlyList<string> Interleave(IEnumerable<string> first, IEnumerable<string> second, int limit)
     {
@@ -696,19 +574,15 @@ public static partial class Lang
     }
 
     /// <summary>
-    /// The original generate-and-take suggestions, for when only a flat word list
-    /// loaded. Unranked, and kept only because it is better than nothing.
+    /// The original unranked suggestions, used when only a flat word list loaded.
     /// </summary>
     private static IReadOnlyList<string> LegacySuggestions(string word)
     {
-        // Check if the first character is capitalized.
         bool isCapped = WordRegex().IsMatch( word ); //"ABCDEFGHIJKLMNOPQRSTUVWXYZ".Contains(word[0]);
 
-        // Get the lowercase version of the word for the remaining tests.
         word = word.ToLower();
 
-        // Generate all of the possible suggestions. We start the GenerateAway thread first as it
-        // is by far the longest process.
+        // GenerateAway starts first; it is by far the longest.
         Task<List<string>> aways = new(() => GenerateAway(word, 2, isCapped, true));
         aways.Start();
 
@@ -729,19 +603,15 @@ public static partial class Lang
             while ( results.Count <= Wordsmith.Configuration.MaximumSuggestions && index < t.Result.Count && IsWord( t.Result[index] ) )
                 results.Add( t.Result[index++] );
         }
-        // Collect the transposes.
         transpose.Wait();
         AddResults( transpose );
 
-        // Collect the aways.
         aways.Wait();
         AddResults( aways );
 
-        // Collect the splits.
         splits.Wait();
         AddResults( splits );
 
-        // Collect the deleted characters.
         deletes.Wait();
         AddResults( deletes );
 
@@ -755,16 +625,10 @@ public static partial class Lang
         // Letter swaps
         for (int x = 0; x < word.Length - 1; ++x)
         {
-            // Get the chars.
             char[] chars = word.ToCharArray();
 
-            // Get the char at x
             char y = chars[x];
-
-            // Move the char from x+1 to x
             chars[x] = chars[x + 1];
-
-            // Overwite char at x+1 with x.
             chars[x + 1] = y;
 
             if (!filter || IsWord(new string(chars)))
@@ -790,13 +654,6 @@ public static partial class Lang
 
     private static List<string> GenerateSplits(string word)
     {
-        // for index
-        // split into two words
-        // if both splits are words
-        // if check word one
-        // then if check word two
-        // add word one + word two
-        // return results
         List<string> results = [];
         for (int i = 1; i < word.Length - 1; ++i)
         {
@@ -813,7 +670,7 @@ public static partial class Lang
         List<string> results = [];
         try
         {
-            // This will toggle between vowel and consonant generation
+            // z toggles between vowel and consonant generation.
             for ( int z = 0; z < 2; z++ )
             {
                 for ( int x = 0; x < word.Length; ++x )
@@ -822,8 +679,7 @@ public static partial class Lang
                     {
                         char[] chars = word.ToCharArray();
 
-                        // Start with vowel replacements, these are more common than
-                        // consonant mistakes.
+                        // Vowels first; they are the more common mistake.
                         if( "aAeEiIoOuUyY".Contains( chars[x] ) == ( z == 0 ) )
                         {
                             chars[x] = letters[y];
@@ -833,9 +689,7 @@ public static partial class Lang
                                 results.Add( isCapped ? test.CaplitalizeFirst() : test );
                         }
 
-                        // For optimization break out of the y loop to avoid checking this
-                        // 26 different times each time the chars[x] is the wrong character type.
-                        // i.e. consant when z==0 or vowel when z==1.
+                        // Wrong character type for this pass: skip its 26 letters.
                         else
                         { 
                             break;
@@ -849,16 +703,12 @@ public static partial class Lang
                 // Insert a character before the word
                 string foretest = $"{letters[y]}{word}";
 
-                // If the inserted character makes a word or not filtering then add it if
-                // it is not already in the results.
                 if ( (!filter || IsWord( foretest )) && !results.Contains( foretest ) )
                     results.Add( foretest );
 
                 // Append a character to the word
                 string afttest = $"{word}{letters[y]}";
 
-                // If the appended character makes a word or not filtering then add it if
-                // it is not already in the results.
                 if ( (!filter || IsWord( afttest )) && !results.Contains( afttest ) )
                     results.Add( afttest );
             }
