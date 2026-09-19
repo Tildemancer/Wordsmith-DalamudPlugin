@@ -36,7 +36,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         _available.SendMessage();
     }
 
-    /// <summary>Reported at most once, not on every keystroke.</summary>
+    /// <summary>Reported ONCE, not on every keystroke.</summary>
     private static bool _reportedState;
 
     private static void ReportState()
@@ -49,12 +49,12 @@ internal sealed partial class SpellIpc : System.IDisposable
             $"Spellcheck: answering with {Lang.WordCount} words loaded, enabled: {Lang.Enabled}.");
     }
 
-    /// <summary>Reported at most once, since a broken result repeats every frame.</summary>
+    /// <summary>Reported once; a broken result repeats every frame. Yikes!</summary>
     private static bool _reportedBadPosition;
 
     /// <summary>
-    /// Where the word currently being typed starts, or the end of the text when the
-    /// last keystroke finished a word. Nothing from here on is marked.
+    /// Where the word being typed starts, or the end of the text when the last
+    /// keystroke finished a word. Nothing past here gets marked.
     /// </summary>
     private static int UnfinishedWordAt(string text)
     {
@@ -99,7 +99,7 @@ internal sealed partial class SpellIpc : System.IDisposable
     private static partial System.Text.RegularExpressions.Regex TellRegex();
 
     /// <summary>
-    /// Finds the misspelled words in a string. Positions are flattened into pairs:
+    /// Finds the misspelled words in a string. Positions come back FLATTENED:
     /// start, length, start, length.
     /// </summary>
     private static List<int> Check(string text)

@@ -156,7 +156,7 @@ public sealed class Wordsmith : IDalamudPlugin
 
         // Fetched off the drawing thread, because it is three HTTP attempts against a
         // remote host with a blocking .Result on each. Done here, the game froze for
-        // however long the network took — and for a timeout if the host was down.
+        // however long the network took, and for a timeout if the host was down.
         // Nothing needs it immediately: it supplies the donation link and the list of
         // downloadable dictionaries, both read long after startup.
         WebManifest = new();
@@ -205,7 +205,7 @@ public sealed class Wordsmith : IDalamudPlugin
         WordsmithUI.Dispose();
 
         // Let the dictionaries go. They are static, so inside a host plugin they would
-        // otherwise outlive the module being switched off — twenty-odd megabytes kept
+        // otherwise outlive the module being switched off. Twenty-odd megabytes kept
         // for something that is not running.
         Lang.Unload();
     }

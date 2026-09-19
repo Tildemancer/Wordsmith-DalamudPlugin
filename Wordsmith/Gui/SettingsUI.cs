@@ -1295,7 +1295,7 @@ internal sealed partial class SettingsUI : Window
 
             // Lady Defile's Ko-fi button used to sit here. It is on TildeTools' Credits
             // tab instead, beside what this copy changed and a note that she does not
-            // distribute it — an appeal in someone else's plugin needs that context,
+            // distribute it. An appeal in someone else's plugin needs that context,
             // and three plugins each asking separately gave none of them any. The link
             // is still read from her web manifest rather than written down.
 

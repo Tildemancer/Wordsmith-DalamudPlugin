@@ -21,7 +21,7 @@ public static partial class Lang
     /// <summary>The flat word list, used only when no affix dictionary can be found.</summary>
     private static readonly HashSet<string> _dictionary = [];
 
-    /// <summary>Words the user has taught it, held apart so they survive a reload.</summary>
+    /// <summary>Words the user taught us, kept apart so they survive a reload.</summary>
     private static readonly HashSet<string> _custom = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -88,12 +88,12 @@ public static partial class Lang
         batch.Clear();
     }
 
-    /// <summary>Words this added to the dictionary, which are therefore its to take back out.</summary>
+    /// <summary>Words we put into the dictionary, and so ours to take back out.</summary>
     private static readonly HashSet<string> _inserted = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Adds a word the dictionary does not already have. The Check is required: a duplicate
-    /// entry means unlearning it later removes the real word too. Caller must hold <see cref="_sync"/>.
+    /// Adds a word the dictionary does not already have. The Check is REQUIRED: a duplicate
+    /// entry means unlearning it later takes the real word with it. Caller must hold <see cref="_sync"/>.
     /// </summary>
     private static void Introduce(string word, bool track = true)
     {
@@ -119,7 +119,7 @@ public static partial class Lang
 
     /// <summary>
     /// Releases the dictionaries and everything gathered alongside them. Static state
-    /// outlives the module inside a host plugin, so it must be dropped by hand.
+    /// outlives the module inside a host plugin, so it all has to be dropped by hand. Yikes!
     /// </summary>
     public static void Unload()
     {
@@ -158,14 +158,14 @@ public static partial class Lang
     } = false;
 
     /// <summary>
-    /// Verifies that the string exists in the hash table
+    /// Checks whether the word is in the dictionary.
     /// </summary>
     /// <param name="key">String to search for.</param>
     /// <returns><see langword="true""/> if the word is in the dictionary</returns>
     public static bool IsWord(string key) => IsWord(key, true);
 
     /// <summary>
-    /// Verifies that the string exists in the hash table
+    /// Checks whether the word is in the dictionary.
     /// </summary>
     /// <param name="key">String to search for.</param>
     /// <param name="lowercase">If <see langword="true"/> then the string is also tried in lowercase.</param>
@@ -186,7 +186,7 @@ public static partial class Lang
             return Known(_hunspell) || Known(_alternate);
         }
 
-        // As written first: capitalisation is meaningful to an affix dictionary ("Paris" vs "paris").
+        // Tried as written first: capitalisation MATTERS to an affix dictionary ("Paris" vs "paris").
         bool Known(WordList? list) =>
             list is not null && (list.Check(key) || (lowercase && list.Check(key.ToLower())));
     }
@@ -237,7 +237,7 @@ public static partial class Lang
             {
                 _ = _custom.Add(s);
 
-                // Also into the dictionary, so it can be suggested and not merely accepted.
+                // Also into the dictionary, so it can be suggested and not only accepted.
                 Introduce(s);
             }
         }
@@ -281,7 +281,6 @@ public static partial class Lang
                     Title = "Wordsmith",
                     Type = Dalamud.Interface.ImGuiNotification.NotificationType.Warning
                 }) ;
-                //Wordsmith.PluginInterface.UiBuilder.AddNotification($"Failed to load the dictionary {Wordsmith.Configuration.DictionaryFile}. Spellcheck disabled.", "Wordsmith", Dalamud.Interface.Internal.Notifications.NotificationType.Warning);
             }
             else
             {
@@ -297,16 +296,13 @@ public static partial class Lang
                         Title = "Wordsmith",
                         Type = Dalamud.Interface.ImGuiNotification.NotificationType.Success
                     });
-                    //Wordsmith.PluginInterface.UiBuilder.AddNotification($"Successfully loaded the dictionary.\n{_dictionary.Count} unique words.", "Wordsmith", Dalamud.Interface.Internal.Notifications.NotificationType.Success);
                 }
             }
         });
         t.Start();
     }
 
-    /// <summary>
-    /// Reinitialize the dictionary.
-    /// </summary>
+    /// <summary>Reinitialize the dictionary.</summary>
     /// <returns><see langword="true"/> if succesfully reinitialized.</returns>
     public static void Reinit() => Init(true);
 
@@ -444,7 +440,7 @@ public static partial class Lang
 
         string title = m.Groups[1].Value;
 
-        string filepath = Path.Combine(Wordsmith.PluginInterface.AssemblyLocation.Directory?.FullName!, $"Dictionaries\\{title}"); // Wordsmith.Configuration.DictionaryFile.Replace($"local: ", "")}");
+        string filepath = Path.Combine(Wordsmith.PluginInterface.AssemblyLocation.Directory?.FullName!, $"Dictionaries\\{title}");
 
         if (!File.Exists(filepath))
             return false;
@@ -456,7 +452,7 @@ public static partial class Lang
             foreach( string l in lines )
             {
                 if( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
-                    ValidateAndAddWord( l ); //_dictionary.Add( l.Trim().ToLower() );
+                    ValidateAndAddWord( l );
             }
 
             return true;
@@ -504,7 +500,7 @@ public static partial class Lang
             _ = _custom.Remove( trimmed );
             _ = _dictionary.Remove( trimmed.ToLower() );
 
-            // Only a word this put into the dictionary is this one's to take back out.
+            // Only a word we put in is ours to take back out.
             if ( _inserted.Remove( trimmed ) && !_supplementary.Contains( trimmed ) )
                 _ = _hunspell?.Remove( trimmed );
         }
@@ -543,8 +539,8 @@ public static partial class Lang
     }
 
     /// <summary>
-    /// Merges two ranked lists by taking from each in turn. They are sorted on separate
-    /// scales, so alternating is what keeps both first choices near the top.
+    /// Merges two ranked lists by taking from each in turn. They are ranked on separate
+    /// scales, so alternating keeps both first choices near the top.
     /// </summary>
     private static IReadOnlyList<string> Interleave(IEnumerable<string> first, IEnumerable<string> second, int limit)
     {
@@ -573,12 +569,10 @@ public static partial class Lang
         return merged;
     }
 
-    /// <summary>
-    /// The original unranked suggestions, used when only a flat word list loaded.
-    /// </summary>
+    /// <summary>The original unranked suggestions, used when only a flat word list loaded.</summary>
     private static IReadOnlyList<string> LegacySuggestions(string word)
     {
-        bool isCapped = WordRegex().IsMatch( word ); //"ABCDEFGHIJKLMNOPQRSTUVWXYZ".Contains(word[0]);
+        bool isCapped = WordRegex().IsMatch( word );
 
         word = word.ToLower();
 

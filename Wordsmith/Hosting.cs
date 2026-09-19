@@ -12,7 +12,7 @@ namespace Wordsmith;
 ///
 /// The splitter becomes the authority on where the breaks fall, so the pieces shown
 /// on screen are the ones that will actually be sent. Its markers and tags come
-/// with it, which is why Wordsmith's own are left off while it is in charge — two
+/// with it, which is why Wordsmith's own are left off while it is in charge. Two
 /// sets would end up on every line.
 ///
 /// Every call falls back to Wordsmith's own behaviour, so with no splitter
