@@ -132,7 +132,7 @@ public sealed class Wordsmith : IDalamudPlugin
     public Wordsmith()
     {
         // Get the configuration.
-        Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        Configuration = Hosting.LoadConfig();
 
         // Look for a splitter plugin; absent one, everything below behaves as before.
         Hosting.Initialise();

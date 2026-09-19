@@ -171,7 +171,7 @@ internal sealed partial class SpellIpc : System.IDisposable
             if (!Lang.AddDictionaryEntry(word))
                 return false;
 
-            Wordsmith.PluginInterface.SavePluginConfig(Wordsmith.Configuration);
+            Hosting.SaveConfig(Wordsmith.Configuration);
             return true;
         }
         catch (System.Exception ex)
