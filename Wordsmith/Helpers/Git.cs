@@ -56,12 +56,10 @@ internal sealed class Git
         using ( HttpClient client = new() )
         {
             // TildeTools
-            // Turns out asking for anything modified since right now isn't a refresh,
-            // it's a question the server answers with "not modified". Which isn't a
-            // success code, so it throws. Meant to force a fresh copy, actually
-            // guaranteed a failed first attempt and a warning in the log on every
-            // single startup. Oops. Saying don't serve this from cache is the header
-            // that does what was wanted.
+            // Asking for anything modified since right now isn't a refresh. The server
+            // answers "not modified", which isn't a success code, so it throws. That
+            // cost a failed first attempt and a warning in the log on every startup.
+            // Oops. No-cache is the header that does what was wanted.
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             int tries = 3;
             while ( tries-- > 0 )

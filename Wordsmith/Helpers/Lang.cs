@@ -48,7 +48,7 @@ public static partial class Lang
 
     /// <summary>
     /// Accepts a set of names as correctly spelled, and as words worth suggesting.
-    /// Safe to call before the dictionary loads; early additions are folded in later.
+    /// Safe to call before the dictionary loads. Early additions are folded in later.
     /// </summary>
     public static void AddSupplementaryWords(IEnumerable<string> words)
     {
@@ -98,8 +98,7 @@ public static partial class Lang
     /// <summary>
     /// Names that are only true for now: the party you are in, the people who have
     /// spoken to you today. Unlike <see cref="_supplementary"/> these are replaced
-    /// wholesale as circumstances change, so they are tracked well enough to take
-    /// back out again.
+    /// wholesale, so they are tracked well enough to take back out again.
     /// </summary>
     private static readonly HashSet<string> _transient = new(StringComparer.OrdinalIgnoreCase);
 
@@ -158,7 +157,7 @@ public static partial class Lang
 
     /// <summary>
     /// Removes the transient names we inserted. Caller must hold <see cref="_sync"/>.
-    /// A name also held by a lasting tier is left alone; it is not ours to remove.
+    /// A name also held by a lasting tier is left alone. Not ours to remove.
     /// </summary>
     private static void Withdraw()
     {
@@ -270,7 +269,7 @@ public static partial class Lang
         string trimmed = key.Trim();
 
         // TildeTools
-        // One lock for the whole lookup; every set below can be written from a background thread.
+        // One lock for the whole lookup. Every set below can be written from a background thread.
         lock (_sync)
         {
             if (_custom.Contains(trimmed) || _supplementary.Contains(trimmed) || _ignored.Contains(trimmed))
@@ -286,7 +285,7 @@ public static partial class Lang
         }
 
         // TildeTools
-        // Tried as written first. An affix dictionary cares about capitalisation, so "Paris" passes and "paris" does not.
+        // Tried as written first. An affix dictionary is case-sensitive, so "Paris" passes and "paris" does not.
         bool Known(WordList? list) =>
             list is not null && (list.Check(key) || (lowercase && list.Check(key.ToLower())));
     }
@@ -367,7 +366,7 @@ public static partial class Lang
         Task t = new(() =>
         {
             // TildeTools
-            // Affix dictionary first; the flat lists are the fallback.
+            // Affix dictionary first. The flat lists are the fallback.
             bool loaded = LoadAffixDictionary();
 
             if ( !loaded )
@@ -590,7 +589,7 @@ public static partial class Lang
         }
 
         // TildeTools
-        // Stored as typed; the lookup ignores case either way.
+        // Stored as typed. The lookup ignores case either way.
         Wordsmith.Configuration.CustomDictionaryEntries.Add( trimmed );
         Wordsmith.Configuration.Save();
         return true;
@@ -689,7 +688,7 @@ public static partial class Lang
         word = word.ToLower();
 
         // TildeTools
-        // GenerateAway starts first; it is by far the longest.
+        // GenerateAway starts first. It is by far the longest.
         Task<List<string>> aways = new(() => GenerateAway(word, 2, isCapped, true));
         aways.Start();
 
@@ -788,7 +787,7 @@ public static partial class Lang
                         char[] chars = word.ToCharArray();
 
                         // TildeTools
-                        // Vowels first; they are the more common mistake.
+                        // Vowels first. They are the more common mistake.
                         if( "aAeEiIoOuUyY".Contains( chars[x] ) == ( z == 0 ) )
                         {
                             chars[x] = letters[y];

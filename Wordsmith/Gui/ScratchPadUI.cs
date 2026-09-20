@@ -1236,9 +1236,9 @@ internal sealed class ScratchPadUI : Window
                 return;
 
             // TildeTools
-            // If a splitter's around the button sends instead of filling the
-            // clipboard, and it sends the whole thing in one go. It paces the parts
-            // itself, so there's no point walking them a press at a time any more.
+            // With a splitter around the button sends instead of filling the clipboard,
+            // and sends the whole thing in one go. It paces the parts itself, so they
+            // are no longer walked a press at a time.
             if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine() ) )
             {
                 if ( Wordsmith.Configuration.TrackWordStatistics )
@@ -1748,10 +1748,9 @@ internal sealed class ScratchPadUI : Window
     internal void FFXIVify()
     {
         // TildeTools
-        // When there's a splitter it decides where the breaks fall, so the preview
-        // here matches what actually goes out. Its lines come back complete, header
-        // and markers and all, so they just go in as the chunk text and nothing else
-        // gets set.
+        // With a splitter, the breaks fall where it puts them, so the preview here
+        // matches what goes out. Its lines come back complete, header and markers and
+        // all, so they go in as the chunk text and nothing else is set.
         List<string>? external = Hosting.SplitterAvailable
             ? Hosting.Split( this.ComposeFullLine() )
             : null;

@@ -51,7 +51,7 @@ internal sealed partial class SpellIpc : System.IDisposable
             $"Spellcheck: answering with {Lang.WordCount} words loaded, enabled: {Lang.Enabled}.");
     }
 
-    /// <summary>Reported once; a broken result repeats every frame.</summary>
+    /// <summary>Reported once. A broken result repeats every frame.</summary>
     private static bool _reportedBadPosition;
 
     /// <summary>
@@ -86,7 +86,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         if (end < 0)
             return text.Length;
 
-        // A tell's target is the next word; skip that too.
+        // A tell's target is the next word, so skip that too.
         if (TellRegex().IsMatch(text))
         {
             int target = text.IndexOf(' ', end + 1);
