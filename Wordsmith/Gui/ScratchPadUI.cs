@@ -1003,10 +1003,13 @@ internal sealed class ScratchPadUI : Window
                     if ( i > 0 )
                         ImGui.Spacing();
 
+                    // TildeTools
+                    // This history item's own parts and OOC setting. Upstream used the pad
+                    // being typed in, so old items got markers for the current part count.
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
                     {
-                        if( cm.AppliesTo( i, this._chunks.Count ) && cm.Visible( this.UseOOC, this._chunks.Count ) )
+                        if( cm.AppliesTo( i, tlist.Count ) && cm.Visible( pad.UseOOC, tlist.Count ) )
                             markers.Add( cm );
                     }
 
