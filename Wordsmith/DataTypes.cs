@@ -518,7 +518,6 @@ internal sealed class TextChunk
     internal int StartIndex { get; set; } = -1;
 
     // TildeTools
-    // A splitter's finished line, which gets none of Wordsmith's markers
     internal bool FromSplitter { get; init; }
 
     /// <summary>

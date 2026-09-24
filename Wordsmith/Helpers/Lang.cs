@@ -19,7 +19,6 @@ public static partial class Lang
     private static WordList? _alternate;
 
     // TildeTools
-    // Fallback, only when no affix dictionary is found
     private static readonly HashSet<string> _dictionary = [];
 
     // TildeTools
@@ -100,7 +99,6 @@ public static partial class Lang
     private static readonly HashSet<string> _transient = new(StringComparer.OrdinalIgnoreCase);
 
     // TildeTools
-    // Only what we put in ourselves
     private static readonly HashSet<string> _transientInserted = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -171,7 +169,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    // Ours to take back out
     private static readonly HashSet<string> _inserted = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -224,7 +221,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    // For diagnosing an empty check
     public static int WordCount
     {
         get
@@ -283,7 +279,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    // Cleared on restart
     private static readonly HashSet<string> _ignored = new(StringComparer.OrdinalIgnoreCase);
 
     // TildeTools
@@ -319,7 +314,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    // An entry may hold several words
     private static void AddCustomWord(string candidate)
     {
         foreach (string s in candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -356,7 +350,6 @@ public static partial class Lang
         Task t = new(() =>
         {
             // TildeTools
-            // Affix first, flat lists are the fallback
             bool loaded = LoadAffixDictionary();
 
             if ( !loaded )
@@ -571,12 +564,10 @@ public static partial class Lang
                 return false;
 
             // TildeTools
-            // Into the dictionary too, or it's accepted but never suggested
             Introduce( trimmed );
         }
 
         // TildeTools
-        // Stored as typed, the lookup ignores case
         Wordsmith.Configuration.CustomDictionaryEntries.Add( trimmed );
         Wordsmith.Configuration.Save();
         return true;
@@ -666,7 +657,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    // The original unranked ones, for when only a flat list loaded
     private static IReadOnlyList<string> LegacySuggestions(string word)
     {
         bool isCapped = WordRegex().IsMatch( word );
@@ -674,7 +664,6 @@ public static partial class Lang
         word = word.ToLower();
 
         // TildeTools
-        // GenerateAway first, it's by far the longest
         Task<List<string>> aways = new(() => GenerateAway(word, 2, isCapped, true));
         aways.Start();
 
@@ -773,7 +762,6 @@ public static partial class Lang
                         char[] chars = word.ToCharArray();
 
                         // TildeTools
-                        // Vowels first, the more common mistake
                         if( "aAeEiIoOuUyY".Contains( chars[x] ) == ( z == 0 ) )
                         {
                             chars[x] = letters[y];
@@ -784,7 +772,6 @@ public static partial class Lang
                         }
 
                         // TildeTools
-                        // Wrong type for this pass, skip its 26 letters
                         else
                         { 
                             break;

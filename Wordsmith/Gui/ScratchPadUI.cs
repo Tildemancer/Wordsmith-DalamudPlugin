@@ -927,7 +927,6 @@ internal sealed class ScratchPadUI : Window
                 DoClearText();
 
             // TildeTools
-            // Scoped, same as the copy button's arrows
             ImGui.SameLine( 0, 0 );
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
             {
@@ -1674,7 +1673,6 @@ internal sealed class ScratchPadUI : Window
     private static string CreateCompleteTextChunk( TextChunk chunk, bool OOC, int index, int count )
     {
         // TildeTools
-        // Splitter lines already carry header, markers and tags
         if ( chunk.FromSplitter )
             return chunk.Text;
 

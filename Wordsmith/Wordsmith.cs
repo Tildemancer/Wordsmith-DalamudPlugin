@@ -153,7 +153,6 @@ public sealed class Wordsmith : IDalamudPlugin
         Configuration = Hosting.LoadConfig();
 
         // TildeTools
-        // Without a splitter everything below behaves as before
         Hosting.Initialise();
 
         // TildeTools

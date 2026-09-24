@@ -16,7 +16,6 @@ internal sealed class Git
         {
             int tries = 3;
             // TildeTools
-            // No-cache, see below
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             while ( tries-- > 0 )
             {

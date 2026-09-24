@@ -37,7 +37,6 @@ internal sealed partial class SpellIpc : System.IDisposable
         _available.SendMessage();
     }
 
-    // Once, not every keystroke
     private static bool _reportedState;
 
     private static void ReportState()
@@ -50,7 +49,6 @@ internal sealed partial class SpellIpc : System.IDisposable
             $"Spellcheck: answering with {Lang.WordCount} words loaded, enabled: {Lang.Enabled}.");
     }
 
-    // Once, a broken result repeats every frame
     private static bool _reportedBadPosition;
 
     // The start of the word being typed, or the end when the last key finished one. Nothing past here is marked
@@ -114,7 +112,6 @@ internal sealed partial class SpellIpc : System.IDisposable
 
             foreach (var word in found)
             {
-                // Still being typed
                 if (word.WordIndex >= unfinished)
                     continue;
 
@@ -175,7 +172,6 @@ internal sealed partial class SpellIpc : System.IDisposable
         }
     }
 
-    // For the session, without learning it
     private static bool IgnoreWord(string word)
     {
         try

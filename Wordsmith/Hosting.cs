@@ -134,7 +134,6 @@ public static class Hosting
     {
         string json = JsonConvert.SerializeObject(config, Formatting.Indented, SerializerSettings);
 
-        // Written beside and moved in, so a failed write leaves no half-file
         string temporary = path + ".tmp";
         File.WriteAllText(temporary, json);
 
@@ -196,9 +195,6 @@ public static class Hosting
 
     #region Splitting and sending
 
-    // Optional splitter. With one, the breaks and markers are its, and the button sends the lot.
-    // Every call falls back to Wordsmith's own behaviour
-
     private const int RequiredApiVersion = 1;
 
     private static ICallGateSubscriber<int>? _apiVersion;
@@ -227,7 +223,6 @@ public static class Hosting
         }
     }
 
-    // Null means no splitter, fall back to Wordsmith's own
     internal static List<string>? Split(string line)
     {
         if (_splitLine == null)
@@ -244,7 +239,6 @@ public static class Hosting
         }
     }
 
-    // False means it declined
     internal static bool Send(string line)
     {
         if (_sendLine == null)
