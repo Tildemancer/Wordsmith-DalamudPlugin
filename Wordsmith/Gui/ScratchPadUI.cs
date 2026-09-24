@@ -533,8 +533,9 @@ internal sealed class ScratchPadUI : Window
                 {
                     // TildeTools
                     // A splitter's lines already carry markers and OOC tags. Drawing ours
-                    // as well showed two of each.
-                    bool ownDecor = !Hosting.SplitterAvailable;
+                    // as well showed two of each. Asked of the part, not of whether a
+                    // splitter is loaded: one that declines leaves Wordsmith's own parts.
+                    bool ownDecor = !this._chunks[i].FromSplitter;
 
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
@@ -1680,7 +1681,7 @@ internal sealed class ScratchPadUI : Window
         // TildeTools
         // A line from an external splitter already carries its header, markers and
         // tags. Building Wordsmith's on top would put two of each on every line.
-        if ( Hosting.SplitterAvailable )
+        if ( chunk.FromSplitter )
             return chunk.Text;
 
         // Build a string with:
@@ -1769,7 +1770,7 @@ internal sealed class ScratchPadUI : Window
 
         if ( external != null )
         {
-            this._chunks = [.. external.Select( line => new TextChunk( line ) )];
+            this._chunks = [.. external.Select( line => new TextChunk( line ) { FromSplitter = true } )];
             return;
         }
 

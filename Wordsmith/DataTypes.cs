@@ -517,6 +517,13 @@ internal sealed class TextChunk
     /// </summary>
     internal int StartIndex { get; set; } = -1;
 
+    // TildeTools
+    /// <summary>
+    /// A finished line from an external splitter, header, markers and tags included.
+    /// Wordsmith adds none of its own to it.
+    /// </summary>
+    internal bool FromSplitter { get; init; }
+
     /// <summary>
     /// Default constructor.
     /// </summary>
