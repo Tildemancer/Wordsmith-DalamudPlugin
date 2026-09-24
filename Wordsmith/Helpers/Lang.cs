@@ -106,6 +106,7 @@ public static partial class Lang
 
     // TildeTools
     private static readonly HashSet<string> _transientInserted = new(StringComparer.Ordinal);
+    private static (bool Suggest, WordList? Into) _transientFor;
 
     /// <summary>
     /// Replaces the transient names with a new set. Everything previously given here
@@ -130,6 +131,14 @@ public static partial class Lang
 
         lock ( _sync )
         {
+            // TildeTools
+            // Nothing changed, and a new Generation would empty every cache that reads it
+            // Also compared by dictionary, a reload needs the names put into the new one
+            if ( (suggest, _hunspell) == _transientFor && wanted.SetEquals( _transient ) )
+                return;
+
+            _transientFor = (suggest, _hunspell);
+
             // TildeTools
             // Out first, so a name leaving the set stops being accepted now, not at restart
             Withdraw();
