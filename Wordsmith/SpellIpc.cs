@@ -1,7 +1,5 @@
 // TildeTools: written for this fork, not part of upstream Wordsmith.
 
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Ipc;
 using Wordsmith.Helpers;
@@ -9,7 +7,7 @@ using Stamp = (int Generation, bool Hyphen, string Punctuation, int Suggestions)
 
 namespace Wordsmith;
 
-internal sealed partial class SpellIpc : System.IDisposable
+internal sealed partial class SpellIpc : IDisposable
 {
     private const int ApiVersion = 1;
     private const string Prefix = "TildeTools.Spell.";
@@ -96,8 +94,8 @@ internal sealed partial class SpellIpc : System.IDisposable
         return end;
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"^/(tell|t|w|whisper|send)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex TellRegex();
+    [GeneratedRegex(@"^/(tell|t|w|whisper|send)\s", RegexOptions.IgnoreCase)]
+    private static partial Regex TellRegex();
 
     // Flattened: start, length, start, length
     private List<int> Check(string text)
@@ -125,7 +123,7 @@ internal sealed partial class SpellIpc : System.IDisposable
                 positions.Add(length);
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Wordsmith.PluginLog.Error(ex, "Spellcheck over IPC failed.");
         }
@@ -146,15 +144,14 @@ internal sealed partial class SpellIpc : System.IDisposable
         stamp = Current;
     }
 
-    // Segment -> its misspellings, (index, length) within it
     private readonly Dictionary<string, List<(int Index, int Length)>> _segments = [];
     private Stamp _segmentsStamp;
 
     private const int SegmentLength = 256;
     private const int MostSegments = 512;
 
-    // The checker takes each word alone, so a cut between words changes nothing
-    // Typing at the end rechecks only the last: 6 ms a keystroke at 16000 characters before, measured
+    // CheckString takes each word alone, so a cut between words changes nothing
+    // Typing at the end rechecks only the last segment, was 6 ms a keystroke at 16000 characters
     private List<(int Index, int Length)> Misspellings(string text)
     {
         lock (_segments)
@@ -180,10 +177,10 @@ internal sealed partial class SpellIpc : System.IDisposable
         }
     }
 
-    // SegmentLength in, then past the rest of that word and the separators after it, the three Words() splits on
+    // The separators Words() splits on, so every cut falls between words
     private static int SegmentEnd(string text, int start)
     {
-        var end = System.Math.Min(text.Length, start + SegmentLength);
+        var end = Math.Min(text.Length, start + SegmentLength);
 
         while (end < text.Length && text[end] is not (' ' or '\r' or '\n'))
             end++;
@@ -194,13 +191,13 @@ internal sealed partial class SpellIpc : System.IDisposable
         return end;
     }
 
-    // Word -> its lookup, off the game's thread: Suggest walks the dictionary, 100 ms and more, measured
     private readonly Dictionary<string, Task<List<string>>> _suggesting = [];
     private Stamp _suggestingStamp;
 
     private const int MostSuggested = 64;
 
     // Null while still looking, the menus ask again each frame
+    // Off the game's thread, GetSuggestions walks the dictionary for 100 ms and more, measured
     private List<string>? Suggest(string word)
     {
         if (!Lang.Enabled || string.IsNullOrWhiteSpace(word))
@@ -223,7 +220,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         {
             return [.. Lang.GetSuggestions(word)];
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Wordsmith.PluginLog.Error(ex, "Spelling suggestions over IPC failed.");
             return [];
@@ -240,7 +237,7 @@ internal sealed partial class SpellIpc : System.IDisposable
             Hosting.SaveConfig(Wordsmith.Configuration);
             return true;
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Wordsmith.PluginLog.Error(ex, "Adding a word to the dictionary over IPC failed.");
             return false;
@@ -254,7 +251,7 @@ internal sealed partial class SpellIpc : System.IDisposable
             Lang.IgnoreWord(word);
             return true;
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Wordsmith.PluginLog.Error(ex, "Ignoring a word over IPC failed.");
             return false;
