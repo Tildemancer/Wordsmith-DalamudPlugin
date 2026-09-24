@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Dalamud.Plugin.Ipc;
 using Wordsmith.Helpers;
 
@@ -14,7 +15,7 @@ internal sealed partial class SpellIpc : System.IDisposable
 
     private readonly ICallGateProvider<int> _apiVersion;
     private readonly ICallGateProvider<string, List<int>> _check;
-    private readonly ICallGateProvider<string, List<string>> _suggest;
+    private readonly ICallGateProvider<string, List<string>?> _suggest;
     private readonly ICallGateProvider<string, bool> _addToDictionary;
     private readonly ICallGateProvider<string, bool> _ignore;
     private readonly ICallGateProvider<object?> _available;
@@ -23,7 +24,7 @@ internal sealed partial class SpellIpc : System.IDisposable
     {
         _apiVersion = Wordsmith.PluginInterface.GetIpcProvider<int>($"{Prefix}ApiVersion");
         _check = Wordsmith.PluginInterface.GetIpcProvider<string, List<int>>($"{Prefix}Check");
-        _suggest = Wordsmith.PluginInterface.GetIpcProvider<string, List<string>>($"{Prefix}Suggest");
+        _suggest = Wordsmith.PluginInterface.GetIpcProvider<string, List<string>?>($"{Prefix}Suggest");
         _addToDictionary = Wordsmith.PluginInterface.GetIpcProvider<string, bool>($"{Prefix}AddToDictionary");
         _ignore = Wordsmith.PluginInterface.GetIpcProvider<string, bool>($"{Prefix}Ignore");
         _available = Wordsmith.PluginInterface.GetIpcProvider<object?>($"{Prefix}Available");
@@ -201,11 +202,39 @@ internal sealed partial class SpellIpc : System.IDisposable
         return end;
     }
 
-    private static List<string> Suggest(string word)
+    // Word -> its lookup, off the game's thread: Suggest walks the dictionary, 100 ms and more, measured
+    private static readonly Dictionary<string, Task<List<string>>> Suggesting = [];
+    private static int _suggestingGeneration = -1;
+
+    private const int MostSuggested = 64;
+
+    // Null while still looking, the menus ask again each frame
+    private static List<string>? Suggest(string word)
+    {
+        if (!Lang.Enabled || string.IsNullOrWhiteSpace(word))
+            return [];
+
+        lock (Suggesting)
+        {
+            // Names learned or words added change the answers
+            if (_suggestingGeneration != Lang.Generation || Suggesting.Count > MostSuggested)
+            {
+                Suggesting.Clear();
+                _suggestingGeneration = Lang.Generation;
+            }
+
+            if (!Suggesting.TryGetValue(word, out var lookup))
+                Suggesting[word] = lookup = Task.Run(() => Lookup(word));
+
+            return lookup.IsCompleted ? lookup.Result : null;
+        }
+    }
+
+    private static List<string> Lookup(string word)
     {
         try
         {
-            return Lang.Enabled ? [.. Lang.GetSuggestions(word)] : [];
+            return [.. Lang.GetSuggestions(word)];
         }
         catch (System.Exception ex)
         {
