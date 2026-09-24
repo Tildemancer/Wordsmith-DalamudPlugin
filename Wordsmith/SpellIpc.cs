@@ -35,6 +35,20 @@ internal sealed partial class SpellIpc : IDisposable
         _ignore.RegisterFunc(IgnoreWord);
 
         _available.SendMessage();
+        Wordsmith.PluginInterface.UiBuilder.Draw += AnnounceLoad;
+    }
+
+    private int _announcedLoads;
+
+    // Available first went out before the dictionary loaded, and every box kept the empty answers from then
+    // Sent from Draw, on the game's thread, where the boxes read those caches
+    private void AnnounceLoad()
+    {
+        if (Lang.Loads == _announcedLoads)
+            return;
+
+        _announcedLoads = Lang.Loads;
+        _available.SendMessage();
     }
 
     private static bool _reportedState;
@@ -262,6 +276,7 @@ internal sealed partial class SpellIpc : IDisposable
 
     public void Dispose()
     {
+        Wordsmith.PluginInterface.UiBuilder.Draw -= AnnounceLoad;
         _apiVersion.UnregisterFunc();
         _check.UnregisterFunc();
         _suggest.UnregisterFunc();

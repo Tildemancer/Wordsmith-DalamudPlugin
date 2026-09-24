@@ -48,6 +48,9 @@ public static partial class Lang
     // Bumped under _sync by every change to what counts as a word
     public static int Generation { get; private set; }
 
+    // TildeTools
+    internal static int Loads { get; private set; }
+
     /// <summary>
     /// Accepts a set of names as correctly spelled, and as words worth suggesting.
     /// Safe to call before the dictionary loads. Early additions are folded in later.
@@ -390,6 +393,9 @@ public static partial class Lang
                 // TildeTools
                 // The first CheckString costs about 20 ms, paid here rather than on the first paste
                 _ = SpellChecker.CheckString("Warming up the spellcheck, with a mistaek and a Name in it.");
+
+                // TildeTools
+                Loads++;
 
                 if( notify )
                 {
