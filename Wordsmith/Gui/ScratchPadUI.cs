@@ -1,6 +1,7 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Bindings.ImGui;
 using Wordsmith.Enums;
 using Wordsmith.Helpers;
@@ -877,33 +878,35 @@ internal sealed class ScratchPadUI : Window
         // If there is more than 1 chunk.
         if ( this._chunks.Count > 1 )
         {
-            // Push the icon font for the character we need then draw the previous chunk button.
-            ImGui.PushFont( UiBuilder.IconFont );
-            if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
+            // TildeTools
+            // Scoped, so the icon font pops when the block ends. Upstream "reset" by pushing
+            // the default font on top, which left fonts on the stack every frame and tripped
+            // ImGui's PushFont/PopFont assertion.
+            using ( ImRaii.PushFont( UiBuilder.IconFont ) )
             {
-                --this._nextChunk;
-                if ( this._nextChunk < 0 )
-                    this._nextChunk = this._chunks.Count - 1;
+                if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
+                {
+                    --this._nextChunk;
+                    if ( this._nextChunk < 0 )
+                        this._nextChunk = this._chunks.Count - 1;
+                }
             }
-            // Reset the font.
-            ImGui.PushFont( UiBuilder.DefaultFont );
 
             // Draw the copy button with no spacing.
             ImGui.SameLine( 0, 0 );
             if ( ImGui.Button( ButtonLabel(), new( width - Wordsmith.BUTTON_Y.Scale() * 2, Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoCopyToClipboard();
 
-            // Push the font and draw the next chunk button with no spacing.
-            ImGui.PushFont( UiBuilder.IconFont );
             ImGui.SameLine( 0, 0 );
-            if ( ImGui.Button( $"{(char)0xF101}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
+            using ( ImRaii.PushFont( UiBuilder.IconFont ) )
             {
-                ++this._nextChunk;
-                if ( this._nextChunk >= this._chunks.Count )
-                    this._nextChunk = 0;
+                if ( ImGui.Button( $"{(char)0xF101}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
+                {
+                    ++this._nextChunk;
+                    if ( this._nextChunk >= this._chunks.Count )
+                        this._nextChunk = 0;
+                }
             }
-            // Reset the font.
-            ImGui.PushFont( UiBuilder.DefaultFont );
         }
         else // If there is only one chunk simply draw a normal button.
         {
@@ -923,14 +926,14 @@ internal sealed class ScratchPadUI : Window
             if ( ImGui.Button( $"Clear##ScratchPad{this.ID}", new( width - Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoClearText();
 
-            // Push the font and draw the next chunk button with no spacing.
-            ImGui.PushFont( UiBuilder.IconFont );
+            // TildeTools
+            // Scoped for the same reason as the copy button's arrows.
             ImGui.SameLine( 0, 0 );
-            if ( ImGui.Button( $"{(char)0xF0E2}##{this.ID}UndoClearButton", new( Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
-                UndoClearText();
-
-            // Reset the font.
-            ImGui.PushFont( UiBuilder.DefaultFont );
+            using ( ImRaii.PushFont( UiBuilder.IconFont ) )
+            {
+                if ( ImGui.Button( $"{(char)0xF0E2}##{this.ID}UndoClearButton", new( Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
+                    UndoClearText();
+            }
         }
         else // If there is only one chunk simply draw a normal button.
         {
