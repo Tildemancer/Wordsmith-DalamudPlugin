@@ -530,14 +530,19 @@ internal sealed class ScratchPadUI : Window
 
                 if ( Wordsmith.Configuration.EnableTextHighlighting )
                 {
+                    // TildeTools
+                    // A splitter's lines already carry markers and OOC tags. Drawing ours
+                    // as well showed two of each.
+                    bool ownDecor = !Hosting.SplitterAvailable;
+
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
                     {
-                        if( cm.AppliesTo( i, this._chunks.Count ) && cm.Visible( this.UseOOC, this._chunks.Count ) )
+                        if( ownDecor && cm.AppliesTo( i, this._chunks.Count ) && cm.Visible( this.UseOOC, this._chunks.Count ) )
                             markers.Add( cm );
                     }
 
-                    DrawChunkItem( this._chunks[i], this.Header.ChatType, this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
+                    DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
                 }
                 else
                 {
@@ -1793,6 +1798,13 @@ internal sealed class ScratchPadUI : Window
     {
         string header = this.Header.ToString();
         string body = this.ScratchString.Unwrap();
+
+        // TildeTools
+        // The OOC box, carried as tags around the whole body. The splitter moves them onto
+        // every part when its own tags match, which they do by default. Without this the
+        // box did nothing while a splitter was in charge.
+        if ( this.UseOOC )
+            body = $"{Wordsmith.Configuration.OocOpeningTag}{body}{Wordsmith.Configuration.OocClosingTag}";
 
         return header.Length > 0 ? $"{header} {body}" : body;
     }
