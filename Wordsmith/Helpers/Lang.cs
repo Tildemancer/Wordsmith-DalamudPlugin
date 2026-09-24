@@ -410,7 +410,7 @@ public static partial class Lang
             _alternate = LoadPair( directory, other );
 
             // TildeTools
-            // Caught alone: a loaded dictionary is worth keeping even if folding names in fails
+            // A loaded dictionary is worth keeping even if folding names in fails
             try
             {
                 AbsorbSupplementary();

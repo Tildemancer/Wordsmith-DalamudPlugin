@@ -1294,7 +1294,7 @@ internal sealed partial class SettingsUI : Window
             _ = ImGui.TableNextColumn();
 
             // TildeTools
-            // Lady Defile's Ko-fi button lives on our Credits tab now, with context. The link still
+            // Lady Defile's Ko-fi button lives on our Credits tab now. The link still
             // comes from her web manifest
 
             //Skip the next column.
