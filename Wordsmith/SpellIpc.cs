@@ -100,7 +100,7 @@ internal sealed partial class SpellIpc : System.IDisposable
     private static partial System.Text.RegularExpressions.Regex TellRegex();
 
     // Flattened: start, length, start, length
-    private static List<int> Check(string text)
+    private List<int> Check(string text)
     {
         var positions = new List<int>();
 
@@ -147,19 +147,19 @@ internal sealed partial class SpellIpc : System.IDisposable
     }
 
     // Segment -> its misspellings, (index, length) within it
-    private static readonly Dictionary<string, List<(int Index, int Length)>> Segments = [];
-    private static Stamp _segmentsStamp;
+    private readonly Dictionary<string, List<(int Index, int Length)>> _segments = [];
+    private Stamp _segmentsStamp;
 
     private const int SegmentLength = 256;
     private const int MostSegments = 512;
 
     // The checker takes each word alone, so a cut between words changes nothing
     // Typing at the end rechecks only the last: 6 ms a keystroke at 16000 characters before, measured
-    private static List<(int Index, int Length)> Misspellings(string text)
+    private List<(int Index, int Length)> Misspellings(string text)
     {
-        lock (Segments)
+        lock (_segments)
         {
-            DropStale(Segments, ref _segmentsStamp, MostSegments);
+            DropStale(_segments, ref _segmentsStamp, MostSegments);
 
             List<(int Index, int Length)> all = [];
             for (var start = 0; start < text.Length;)
@@ -167,8 +167,8 @@ internal sealed partial class SpellIpc : System.IDisposable
                 var end = SegmentEnd(text, start);
                 var segment = text[start..end];
 
-                if (!Segments.TryGetValue(segment, out var found))
-                    Segments[segment] = found = [.. SpellChecker.CheckString(segment).Select(w => (w.WordIndex, w.WordLength))];
+                if (!_segments.TryGetValue(segment, out var found))
+                    _segments[segment] = found = [.. SpellChecker.CheckString(segment).Select(w => (w.WordIndex, w.WordLength))];
 
                 foreach (var (index, length) in found)
                     all.Add((start + index, length));
@@ -195,23 +195,23 @@ internal sealed partial class SpellIpc : System.IDisposable
     }
 
     // Word -> its lookup, off the game's thread: Suggest walks the dictionary, 100 ms and more, measured
-    private static readonly Dictionary<string, Task<List<string>>> Suggesting = [];
-    private static Stamp _suggestingStamp;
+    private readonly Dictionary<string, Task<List<string>>> _suggesting = [];
+    private Stamp _suggestingStamp;
 
     private const int MostSuggested = 64;
 
     // Null while still looking, the menus ask again each frame
-    private static List<string>? Suggest(string word)
+    private List<string>? Suggest(string word)
     {
         if (!Lang.Enabled || string.IsNullOrWhiteSpace(word))
             return [];
 
-        lock (Suggesting)
+        lock (_suggesting)
         {
-            DropStale(Suggesting, ref _suggestingStamp, MostSuggested);
+            DropStale(_suggesting, ref _suggestingStamp, MostSuggested);
 
-            if (!Suggesting.TryGetValue(word, out var lookup))
-                Suggesting[word] = lookup = Task.Run(() => Lookup(word));
+            if (!_suggesting.TryGetValue(word, out var lookup))
+                _suggesting[word] = lookup = Task.Run(() => Lookup(word));
 
             return lookup.IsCompleted ? lookup.Result : null;
         }
