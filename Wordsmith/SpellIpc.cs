@@ -79,12 +79,18 @@ internal sealed partial class SpellIpc : System.IDisposable
         if (end < 0)
             return text.Length;
 
-        // A tell's target is the next word, skip that too
+        // A tell's target is two words, First Last@World, or one placeholder like <t>, and is skipped too
         if (TellRegex().IsMatch(text))
         {
-            int target = text.IndexOf(' ', end + 1);
-            if (target > 0)
-                return target;
+            int first = text.IndexOf(' ', end + 1);
+            if (first < 0)
+                return text.Length;
+
+            if (text[end + 1] == '<')
+                return first;
+
+            int second = text.IndexOf(' ', first + 1);
+            return second < 0 ? text.Length : second;
         }
 
         return end;
