@@ -323,7 +323,6 @@ public static partial class Lang
             lock (_sync)
             {
                 _ = _custom.Add(s);
-                _generation++;
 
                 // TildeTools
                 // Into the dictionary too, so it can be suggested, not just accepted
