@@ -1775,6 +1775,7 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     private string ButtonLabel()
     {
+        // TildeTools
         // Where the parts came from, not whether a splitter is loaded: off, it declines and the button copies
         if ( this._chunks.Count > 0 && this._chunks[0].FromSplitter )
         {
