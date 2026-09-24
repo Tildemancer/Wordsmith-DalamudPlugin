@@ -51,6 +51,9 @@ public static partial class Lang
     // TildeTools
     internal static int Loads { get; private set; }
 
+    // TildeTools
+    private static int _loadToken;
+
     /// <summary>
     /// Accepts a set of names as correctly spelled, and as words worth suggesting.
     /// Safe to call before the dictionary loads. Early additions are folded in later.
@@ -236,6 +239,7 @@ public static partial class Lang
             _transientInserted.Clear();
             _ignored.Clear();
             Generation++;
+            _loadToken++;
         }
 
         Enabled = false;
@@ -316,13 +320,27 @@ public static partial class Lang
         }
     }
 
-    private static void ValidateAndAddWord(string candidate)
+    // TildeTools
+    // A word list read whole, then published only if Unload hasn't run since Init, like the affix dictionary
+    // True either way, it did load, so the caller tries no other and sees the token moved
+    private static bool Publish( HashSet<string> words, int token )
+    {
+        lock ( _sync )
+        {
+            if ( token == _loadToken )
+                _dictionary.UnionWith( words );
+        }
+
+        return true;
+    }
+
+    private static void ValidateAndAddWord(string candidate, HashSet<string> into)
     {
         // TildeTools
         string[] splits = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (string s in splits)
-            _ = _dictionary.Add(s.ToLower());
+            _ = into.Add(s.ToLower());
     }
 
     // TildeTools
@@ -359,16 +377,19 @@ public static partial class Lang
         ValidateConfiguration();
         _dictionary.Clear();
 
+        // TildeTools
+        int token = _loadToken;
+
         Task t = new(() =>
         {
             // TildeTools
-            bool loaded = LoadAffixDictionary();
+            bool loaded = LoadAffixDictionary( token );
 
             if ( !loaded )
-                loaded = LoadWebLanguage();
+                loaded = LoadWebLanguage( token );
 
             if ( !loaded )
-                loaded = LoadLanguageFile();
+                loaded = LoadLanguageFile( token );
 
             if (!loaded)
             {
@@ -381,14 +402,20 @@ public static partial class Lang
             }
             else
             {
-                foreach (string word in Wordsmith.Configuration.CustomDictionaryEntries)
-                    AddCustomWord(word);
-
-                Enabled = true;
-
                 // TildeTools
+                // Unloaded while this ran, so nothing of it was published and Wordsmith stays off
+                // Under _sync through Enabled, so Unload lands before the check or after all of it
                 lock ( _sync )
+                {
+                    if ( token != _loadToken )
+                        return;
+
+                    foreach (string word in Wordsmith.Configuration.CustomDictionaryEntries)
+                        AddCustomWord(word);
+
+                    Enabled = true;
                     Generation++;
+                }
 
                 // TildeTools
                 // The first CheckString costs about 20 ms, paid here rather than on the first paste
@@ -419,7 +446,7 @@ public static partial class Lang
     /// Loads a Hunspell dictionary pair shipped beside the plugin, chosen from the
     /// existing dictionary setting: en_GB when it names GB, UK or British, else en_US.
     /// </summary>
-    private static bool LoadAffixDictionary()
+    private static bool LoadAffixDictionary( int token )
     {
         try
         {
@@ -427,26 +454,37 @@ public static partial class Lang
             string name = PreferredAffixDictionary();
             string other = name == "en_GB" ? "en_US" : "en_GB";
 
-            _hunspell = LoadPair( directory, name );
-            if ( _hunspell is null )
+            WordList? hunspell = LoadPair( directory, name );
+            if ( hunspell is null )
                 return false;
 
-            _alternate = LoadPair( directory, other );
+            WordList? alternate = LoadPair( directory, other );
 
             // TildeTools
-            // A loaded dictionary is worth keeping even if folding names in fails
-            try
+            // Published only if Unload hasn't run since Init, or a stale load held ~20 MB with Wordsmith off
+            // True either way, it did load, so the caller tries no fallback and sees the token moved
+            lock ( _sync )
             {
-                AbsorbSupplementary();
-            }
-            catch ( Exception e )
-            {
-                Wordsmith.PluginLog.Error( $"Loaded the dictionary but could not add the supplied names.\n{e}" );
+                if ( token != _loadToken )
+                    return true;
+
+                (_hunspell, _alternate) = (hunspell, alternate);
+
+                // TildeTools
+                // A loaded dictionary is worth keeping even if folding names in fails
+                try
+                {
+                    AbsorbSupplementary();
+                }
+                catch ( Exception e )
+                {
+                    Wordsmith.PluginLog.Error( $"Loaded the dictionary but could not add the supplied names.\n{e}" );
+                }
             }
 
             Wordsmith.PluginLog.Information(
-                $"Loaded the {name} affix dictionary: {_hunspell.RootCount} root words" +
-                ( _alternate is null ? "." : $", with {other} accepted alongside it." ) );
+                $"Loaded the {name} affix dictionary: {hunspell.RootCount} root words" +
+                ( alternate is null ? "." : $", with {other} accepted alongside it." ) );
 
             return true;
         }
@@ -493,7 +531,7 @@ public static partial class Lang
         return BritishDictionaryRegex().IsMatch( configured ) ? "en_GB" : "en_US";
     }
 
-    private static bool LoadWebLanguage()
+    private static bool LoadWebLanguage( int token )
     {
         Match m = WebDictionaryRegex().Match( Wordsmith.Configuration.DictionaryFile );
         if (!m.Success)
@@ -513,13 +551,15 @@ public static partial class Lang
             if ( lines.Length == 0 )
                 throw new Exception();
 
+            HashSet<string> words = [];
+
             foreach( string l in lines )
             {
                 if( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
-                    ValidateAndAddWord( l );
+                    ValidateAndAddWord( l, words );
             }
 
-            return true;
+            return Publish( words, token );
         }
         catch (HttpRequestException e)
         {
@@ -537,7 +577,7 @@ public static partial class Lang
     }
 
     // TildeTools
-    private static bool LoadLanguageFile()
+    private static bool LoadLanguageFile( int token )
     {
         Match m = LocalDictionaryRegex().Match( Wordsmith.Configuration.DictionaryFile );
         if ( !m.Success )
@@ -557,13 +597,15 @@ public static partial class Lang
         {
             string[] lines = File.ReadAllLines(filepath);
 
+            HashSet<string> words = [];
+
             foreach( string l in lines )
             {
                 if( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
-                    ValidateAndAddWord( l );
+                    ValidateAndAddWord( l, words );
             }
 
-            return true;
+            return Publish( words, token );
         }
         catch (Exception e)
         {
