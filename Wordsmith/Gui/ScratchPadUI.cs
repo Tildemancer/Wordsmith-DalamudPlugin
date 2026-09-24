@@ -1245,7 +1245,6 @@ internal sealed class ScratchPadUI : Window
                 return;
 
             // TildeTools
-            // With a splitter the button sends the lot, paced, instead of copying a part per press
             if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine() ) )
             {
                 if ( Wordsmith.Configuration.TrackWordStatistics )
