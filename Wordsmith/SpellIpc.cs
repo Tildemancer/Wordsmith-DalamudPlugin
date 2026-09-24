@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Ipc;
 using Wordsmith.Helpers;
+using Stamp = (int Generation, bool Hyphen, string Punctuation, int Suggestions);
 
 namespace Wordsmith;
 
@@ -132,25 +133,33 @@ internal sealed partial class SpellIpc : System.IDisposable
         return positions;
     }
 
+    // The answers change with the dictionary, and with settings that don't move Lang.Generation
+    private static Stamp Current => (Lang.Generation, Wordsmith.Configuration.IgnoreWordsEndingInHyphen,
+        Wordsmith.Configuration.PunctuationCleaningList, Wordsmith.Configuration.MaximumSuggestions);
+
+    private static void DropStale<T>(Dictionary<string, T> cache, ref Stamp stamp, int most)
+    {
+        if (stamp == Current && cache.Count <= most)
+            return;
+
+        cache.Clear();
+        stamp = Current;
+    }
+
     // Segment -> its misspellings, (index, length) within it
     private static readonly Dictionary<string, List<(int Index, int Length)>> Segments = [];
-    private static int _segmentsGeneration = -1;
+    private static Stamp _segmentsStamp;
 
     private const int SegmentLength = 256;
     private const int MostSegments = 512;
 
-    // A segment at a time, each kept until Lang.Generation moves
     // The checker takes each word alone, so a cut between words changes nothing
     // Typing at the end rechecks only the last: 6 ms a keystroke at 16000 characters before, measured
     private static List<(int Index, int Length)> Misspellings(string text)
     {
         lock (Segments)
         {
-            if (_segmentsGeneration != Lang.Generation || Segments.Count > MostSegments)
-            {
-                Segments.Clear();
-                _segmentsGeneration = Lang.Generation;
-            }
+            DropStale(Segments, ref _segmentsStamp, MostSegments);
 
             List<(int Index, int Length)> all = [];
             for (var start = 0; start < text.Length;)
@@ -187,7 +196,7 @@ internal sealed partial class SpellIpc : System.IDisposable
 
     // Word -> its lookup, off the game's thread: Suggest walks the dictionary, 100 ms and more, measured
     private static readonly Dictionary<string, Task<List<string>>> Suggesting = [];
-    private static int _suggestingGeneration = -1;
+    private static Stamp _suggestingStamp;
 
     private const int MostSuggested = 64;
 
@@ -199,12 +208,7 @@ internal sealed partial class SpellIpc : System.IDisposable
 
         lock (Suggesting)
         {
-            // Names learned or words added change the answers
-            if (_suggestingGeneration != Lang.Generation || Suggesting.Count > MostSuggested)
-            {
-                Suggesting.Clear();
-                _suggestingGeneration = Lang.Generation;
-            }
+            DropStale(Suggesting, ref _suggestingStamp, MostSuggested);
 
             if (!Suggesting.TryGetValue(word, out var lookup))
                 Suggesting[word] = lookup = Task.Run(() => Lookup(word));
