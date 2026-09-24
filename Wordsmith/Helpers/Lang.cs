@@ -373,6 +373,11 @@ public static partial class Lang
                     AddCustomWord(word);
 
                 Enabled = true;
+
+                // TildeTools
+                // The first check compiles the checker and wakes the dictionary, about 20 ms on the frame of the first paste
+                _ = SpellChecker.CheckString("Warming up the spellcheck, with a mistaek and a Name in it.");
+
                 if( notify )
                 {
                     _ = Wordsmith.NotificationManager.AddNotification(new()
