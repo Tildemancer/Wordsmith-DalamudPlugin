@@ -379,7 +379,7 @@ public static partial class Lang
                     Generation++;
 
                 // TildeTools
-                // The first check compiles the checker and wakes the dictionary, about 20 ms on the frame of the first paste
+                // The first CheckString costs about 20 ms, paid here rather than on the first paste
                 _ = SpellChecker.CheckString("Warming up the spellcheck, with a mistaek and a Name in it.");
 
                 if( notify )
