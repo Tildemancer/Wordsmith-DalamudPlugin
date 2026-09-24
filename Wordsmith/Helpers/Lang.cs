@@ -306,21 +306,6 @@ public static partial class Lang
         }
     }
 
-    public static void UnignoreWord(string word)
-    {
-        lock (_sync)
-        {
-            _ = _ignored.Remove(word.Trim());
-            _generation++;
-        }
-    }
-
-    public static bool IsIgnored(string word)
-    {
-        lock (_sync)
-            return _ignored.Contains(word.Trim());
-    }
-
     private static void ValidateAndAddWord(string candidate)
     {
         // TildeTools
