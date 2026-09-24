@@ -202,9 +202,18 @@ public static class Hosting
     private static ICallGateSubscriber<string, int, bool>? _sendLine;
     private static ICallGateSubscriber<string, int, List<int>>? _bodySpans;
     private static ICallGateSubscriber<string, int, List<int>>? _bodySources;
+    private static ICallGateSubscriber<object?>? _available;
+
+    internal static int SplitterGeneration { get; private set; }
+
+    private static void SplitterChanged() => SplitterGeneration++;
+
+    internal static void Shutdown() => _available?.Unsubscribe(SplitterChanged);
 
     internal static void Initialise()
     {
+        _available = Wordsmith.PluginInterface.GetIpcSubscriber<object?>("TildeTools.Split.Available");
+        _available.Subscribe(SplitterChanged);
         _apiVersion = Wordsmith.PluginInterface.GetIpcSubscriber<int>("TildeTools.Split.ApiVersion");
         _splitLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Split.SplitLine");
         _sendLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, bool>("TildeTools.Split.SendLine");

@@ -79,6 +79,8 @@ internal sealed class ScratchPadUI : Window
     private bool _textchanged = false;
     private bool _ignoreTextEdit = false;
     private bool _invalidateChunks = false;
+    // TildeTools
+    private int _splitterSeen;
 
     /// <summary>
     /// The text used by the replacement inputtext.
@@ -255,6 +257,14 @@ internal sealed class ScratchPadUI : Window
             // Recheck spelling
             DoSpellCheck();
             this._do_spell_check = false;
+        }
+
+        // TildeTools
+        // Moves on TildeTools.Split.Available: the splitter's settings, the chat box's channel or the /r target
+        if ( this._splitterSeen != Hosting.SplitterGeneration )
+        {
+            this._splitterSeen = Hosting.SplitterGeneration;
+            this._invalidateChunks = true;
         }
 
         // If the text chunks have been invalidated then update them

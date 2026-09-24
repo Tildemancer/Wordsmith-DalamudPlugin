@@ -222,6 +222,7 @@ public sealed class Wordsmith : IDalamudPlugin
         // TildeTools
         // Static, so inside a host they'd outlive the module, holding ~20MB
         Lang.Unload();
+        Hosting.Shutdown();
     }
 
     internal static void ResetConfig()
