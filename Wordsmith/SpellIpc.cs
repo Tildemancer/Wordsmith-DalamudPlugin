@@ -148,7 +148,9 @@ internal sealed partial class SpellIpc : IDisposable
     private Stamp _segmentsStamp;
 
     private const int SegmentLength = 256;
-    private const int MostSegments = 512;
+
+    // A 32000-byte message and its parts several times over, since full it empties and rechecks the lot
+    private const int MostSegments = 4096;
 
     // CheckString takes each word alone, so a cut between words changes nothing
     // Typing at the end rechecks only the last segment, was 6 ms a keystroke at 16000 characters
