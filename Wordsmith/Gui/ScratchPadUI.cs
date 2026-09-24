@@ -543,7 +543,7 @@ internal sealed class ScratchPadUI : Window
                             markers.Add( cm );
                     }
 
-                    DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
+                    DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections, ownDecor );
                 }
                 else
                 {
@@ -567,7 +567,7 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     /// <param name="chunk">Chunk to be drawn.</param>
     /// <param name="ct">Chat type to display with the chunk.</param>
-    private static void DrawChunkItem( TextChunk chunk, ChatType ct, bool ooc, int index, int chunkCount, float spaceWidth, List<ChunkMarker> lMarkers, List<Word>? corrections )
+    private static void DrawChunkItem( TextChunk chunk, ChatType ct, bool ooc, int index, int chunkCount, float spaceWidth, List<ChunkMarker> lMarkers, List<Word>? corrections, bool continuation = true )
     {
         // Don't attempt to draw null chunks.
         if ( chunk is null )
@@ -672,7 +672,8 @@ internal sealed class ScratchPadUI : Window
         DrawMarkers( [.. lMarkers.Where( x => x.Position == MarkerPosition.AfterOOC )] );
 
         // If we are to draw the continuation marker then use the same DrawMarkers system 
-        if ( chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
+        // TildeTools: off when a splitter's line already carries its own count.
+        if ( continuation && chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
             DrawMarkers( [new( Wordsmith.Configuration.ContinuationMarker, 0, 0, 0 )] );
 
         // Draw the after continuation markers
