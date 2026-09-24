@@ -44,6 +44,12 @@ public static partial class Lang
     // Names arrive on a background thread while checks run on the draw thread
     private static readonly object _sync = new();
 
+    // TildeTools
+    // Bumped by every change to what counts as a word, so a cached check knows it's stale
+    private static int _generation;
+
+    public static int Generation => _generation;
+
     /// <summary>
     /// Accepts a set of names as correctly spelled, and as words worth suggesting.
     /// Safe to call before the dictionary loads. Early additions are folded in later.
@@ -86,6 +92,8 @@ public static partial class Lang
                 // Not ours to remove: a game name is never the user's to unlearn
                 Introduce( word, track: false );
             }
+
+            _generation++;
         }
 
         batch.Clear();
@@ -131,6 +139,8 @@ public static partial class Lang
             _transient.Clear();
             foreach ( string word in wanted )
                 _ = _transient.Add( word );
+
+            _generation++;
 
             if ( !suggest || _hunspell is null )
                 return;
@@ -215,6 +225,7 @@ public static partial class Lang
             _transient.Clear();
             _transientInserted.Clear();
             _ignored.Clear();
+            _generation++;
         }
 
         Enabled = false;
@@ -289,13 +300,19 @@ public static partial class Lang
             return;
 
         lock (_sync)
+        {
             _ = _ignored.Add(trimmed);
+            _generation++;
+        }
     }
 
     public static void UnignoreWord(string word)
     {
         lock (_sync)
+        {
             _ = _ignored.Remove(word.Trim());
+            _generation++;
+        }
     }
 
     public static bool IsIgnored(string word)
@@ -321,6 +338,7 @@ public static partial class Lang
             lock (_sync)
             {
                 _ = _custom.Add(s);
+                _generation++;
 
                 // TildeTools
                 // Into the dictionary too, so it can be suggested, not just accepted
@@ -373,6 +391,10 @@ public static partial class Lang
                     AddCustomWord(word);
 
                 Enabled = true;
+
+                // TildeTools
+                lock ( _sync )
+                    _generation++;
 
                 // TildeTools
                 // The first check compiles the checker and wakes the dictionary, about 20 ms on the frame of the first paste
@@ -569,6 +591,9 @@ public static partial class Lang
                 return false;
 
             // TildeTools
+            _generation++;
+
+            // TildeTools
             Introduce( trimmed );
         }
 
@@ -588,6 +613,9 @@ public static partial class Lang
         {
             _ = _custom.Remove( trimmed );
             _ = _dictionary.Remove( trimmed.ToLower() );
+
+            // TildeTools
+            _generation++;
 
             // TildeTools
             // Only a word we put in is ours to take out

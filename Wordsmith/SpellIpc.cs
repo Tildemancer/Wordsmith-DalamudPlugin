@@ -111,33 +111,33 @@ internal sealed partial class SpellIpc : System.IDisposable
             if (!Lang.Enabled || string.IsNullOrEmpty(text))
                 return positions;
 
-            var found = SpellChecker.CheckString(text);
+            var found = Misspellings(text);
 
             int unfinished = UnfinishedWordAt(text);
             int commandEnds = CommandEndsAt(text);
 
-            foreach (var word in found)
+            foreach (var (index, length) in found)
             {
-                if (word.WordIndex >= unfinished)
+                if (index >= unfinished)
                     continue;
 
-                if (word.WordIndex < commandEnds)
+                if (index < commandEnds)
                     continue;
 
-                if (word.WordIndex < 0 || word.WordLength < 1)
+                if (index < 0 || length < 1)
                 {
                     if (!_reportedBadPosition)
                     {
                         _reportedBadPosition = true;
                         Wordsmith.PluginLog.Warning(
-                            $"Spellcheck: a flagged word had no usable position: index {word.WordIndex}, length {word.WordLength}.");
+                            $"Spellcheck: a flagged word had no usable position: index {index}, length {length}.");
                     }
 
                     continue;
                 }
 
-                positions.Add(word.WordIndex);
-                positions.Add(word.WordLength);
+                positions.Add(index);
+                positions.Add(length);
             }
         }
         catch (System.Exception ex)
@@ -146,6 +146,59 @@ internal sealed partial class SpellIpc : System.IDisposable
         }
 
         return positions;
+    }
+
+    // Segment -> its misspellings, (index, length) within it
+    private static readonly Dictionary<string, List<(int Index, int Length)>> Segments = [];
+    private static int _segmentsGeneration = -1;
+
+    private const int SegmentLength = 256;
+    private const int MostSegments = 512;
+
+    // A segment at a time, each kept until Lang.Generation moves
+    // The checker takes each word alone, so a cut between words changes nothing
+    // Typing at the end rechecks only the last: 6 ms a keystroke at 16000 characters before, measured
+    private static List<(int Index, int Length)> Misspellings(string text)
+    {
+        lock (Segments)
+        {
+            if (_segmentsGeneration != Lang.Generation || Segments.Count > MostSegments)
+            {
+                Segments.Clear();
+                _segmentsGeneration = Lang.Generation;
+            }
+
+            List<(int Index, int Length)> all = [];
+            for (var start = 0; start < text.Length;)
+            {
+                var end = SegmentEnd(text, start);
+                var segment = text[start..end];
+
+                if (!Segments.TryGetValue(segment, out var found))
+                    Segments[segment] = found = [.. SpellChecker.CheckString(segment).Select(w => (w.WordIndex, w.WordLength))];
+
+                foreach (var (index, length) in found)
+                    all.Add((start + index, length));
+
+                start = end;
+            }
+
+            return all;
+        }
+    }
+
+    // SegmentLength in, then past the rest of that word and the separators after it, the three Words() splits on
+    private static int SegmentEnd(string text, int start)
+    {
+        var end = System.Math.Min(text.Length, start + SegmentLength);
+
+        while (end < text.Length && text[end] is not (' ' or '\r' or '\n'))
+            end++;
+
+        while (end < text.Length && text[end] is ' ' or '\r' or '\n')
+            end++;
+
+        return end;
     }
 
     private static List<string> Suggest(string word)
