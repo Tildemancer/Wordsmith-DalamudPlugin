@@ -627,8 +627,9 @@ public static partial class Lang
             {
                 // TildeTools
                 // Held for the whole call, Suggest walks the dictionary
+                // Checked again inside, Unload can null it while a lookup waits for the lock
                 lock ( _sync )
-                    return Interleave(
+                    return _hunspell is null ? [] : Interleave(
                         _hunspell.Suggest( word ),
                         _alternate?.Suggest( word ) ?? [],
                         Wordsmith.Configuration.MaximumSuggestions );
