@@ -1775,7 +1775,8 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     private string ButtonLabel()
     {
-        if ( Hosting.SplitterAvailable )
+        // Where the parts came from, not whether a splitter is loaded: off, it declines and the button copies
+        if ( this._chunks.Count > 0 && this._chunks[0].FromSplitter )
         {
             string parts = this._chunks.Count > 1 ? $" ({this._chunks.Count} parts)" : "";
             return $"Post{parts}##ScratchPad{this.ID}";
