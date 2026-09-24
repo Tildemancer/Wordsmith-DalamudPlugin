@@ -138,10 +138,8 @@ public sealed class Wordsmith : IDalamudPlugin
         catch
         {
             // TildeTools
-            // Gates registered before the throw would still be held on the next load,
-            // and a name already taken throws again. So they go back first, each step
-            // guarded on its own, because a half-built plugin can easily fail to tear itself
-            // down and the throw below has to survive that.
+            // Gates go back first, or they're still held next load and a taken name throws again.
+            // Each step guarded, a half-built plugin can fail its own teardown
             try { this._spellIpc?.Dispose(); } catch { /* nothing left to try */ }
             try { DisposeInner(); } catch { /* nothing left to try */ }
 
@@ -155,12 +153,10 @@ public sealed class Wordsmith : IDalamudPlugin
         Configuration = Hosting.LoadConfig();
 
         // TildeTools
-        // Go looking for a splitter plugin. Without one, everything below behaves as
-        // it did before.
+        // Without a splitter everything below behaves as before
         Hosting.Initialise();
 
         // TildeTools
-        // Offer the spellchecker to other plugins.
         _spellIpc = new SpellIpc();
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
@@ -178,11 +174,7 @@ public sealed class Wordsmith : IDalamudPlugin
 
 
         // TildeTools
-        // Off the drawing thread, this one. Three HTTP attempts at a remote host with a
-        // blocking .Result on each, so inline it froze the game for the length of the
-        // request, or a whole timeout if the host was down. Nothing needs it straight
-        // away: it's the donation link and the list of downloadable dictionaries, both
-        // read long after startup.
+        // Off the draw thread: three blocking HTTP attempts froze the game. Nothing needs it at startup
         WebManifest = new();
         _ = System.Threading.Tasks.Task.Run( () =>
         {
@@ -229,8 +221,7 @@ public sealed class Wordsmith : IDalamudPlugin
         WordsmithUI.Dispose();
 
         // TildeTools
-        // Let the dictionaries go. They are static, so inside a host plugin they would
-        // outlive the module being switched off, holding ~20MB.
+        // Static, so inside a host they'd outlive the module, holding ~20MB
         Lang.Unload();
     }
 

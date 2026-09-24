@@ -11,7 +11,6 @@ namespace Wordsmith.Helpers;
 public static partial class Lang
 {
     // TildeTools
-    /// <summary>The loaded dictionary, or null until <see cref="Init()"/> succeeds.</summary>
     private static WordList? _hunspell;
 
     /// <summary>
@@ -20,11 +19,11 @@ public static partial class Lang
     private static WordList? _alternate;
 
     // TildeTools
-    /// <summary>The flat word list, used only when no affix dictionary can be found.</summary>
+    // Fallback, only when no affix dictionary is found
     private static readonly HashSet<string> _dictionary = [];
 
     // TildeTools
-    /// <summary>Words the user taught us, kept apart so they survive a reload.</summary>
+    // Kept apart so they survive a reload
     private static readonly HashSet<string> _custom = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -43,7 +42,7 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Guards the dictionary. Names arrive on a background thread while checks run on the drawing one.</summary>
+    // Names arrive on a background thread while checks run on the draw thread
     private static readonly object _sync = new();
 
     /// <summary>
@@ -61,11 +60,10 @@ public static partial class Lang
                 continue;
 
             // TildeTools
-            // Added to the set inside Absorb, under the lock.
             batch.Add( trimmed );
 
             // TildeTools
-            // Handed over in batches so the drawing thread never waits on the whole set.
+            // Batches, so the draw thread never waits on the whole set
             if ( batch.Count >= 512 )
                 Absorb( batch );
         }
@@ -74,7 +72,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Folds a batch of names into the loaded dictionary, then empties it.</summary>
     private static void Absorb(List<string> batch)
     {
         if ( batch.Count == 0 )
@@ -87,7 +84,7 @@ public static partial class Lang
                 _ = _supplementary.Add( word );
 
                 // TildeTools
-                // Not tracked as ours to remove: a game name is never the user's to unlearn.
+                // Not ours to remove: a game name is never the user's to unlearn
                 Introduce( word, track: false );
             }
         }
@@ -103,7 +100,7 @@ public static partial class Lang
     private static readonly HashSet<string> _transient = new(StringComparer.OrdinalIgnoreCase);
 
     // TildeTools
-    /// <summary>The subset of <see cref="_transient"/> we put into the dictionary ourselves.</summary>
+    // Only what we put in ourselves
     private static readonly HashSet<string> _transientInserted = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -130,8 +127,7 @@ public static partial class Lang
         lock ( _sync )
         {
             // TildeTools
-            // Taken back out first, so a name dropping out of the set really does stop
-            // being accepted rather than lingering until the next restart.
+            // Out first, so a name leaving the set stops being accepted now, not at restart
             Withdraw();
 
             _transient.Clear();
@@ -144,8 +140,7 @@ public static partial class Lang
             foreach ( string word in wanted )
             {
                 // TildeTools
-                // Never claimed if the dictionary already had it. Turns out taking it
-                // back out later takes the real word with it.
+                // Never claimed if already there, or taking it back out takes the real word too
                 if ( _hunspell.Check( word ) )
                     continue;
 
@@ -176,7 +171,7 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Words we put into the dictionary, and so ours to take back out.</summary>
+    // Ours to take back out
     private static readonly HashSet<string> _inserted = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -193,7 +188,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Puts the names collected so far into a dictionary that has just loaded.</summary>
     private static void AbsorbSupplementary()
     {
         lock ( _sync )
@@ -230,7 +224,7 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>How many words the dictionary holds, for diagnosing an empty check.</summary>
+    // For diagnosing an empty check
     public static int WordCount
     {
         get
@@ -241,11 +235,9 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Whether the real affix dictionary is in use, rather than the fallback list.</summary>
     public static bool UsingAffixDictionary => _hunspell is not null;
 
     // TildeTools
-    /// <summary>True once Init() has loaded a language file.</summary>
     public static bool Enabled
     {
         get => field; set => field = value;
@@ -269,7 +261,7 @@ public static partial class Lang
         string trimmed = key.Trim();
 
         // TildeTools
-        // One lock for the whole lookup. Every set below can be written from a background thread.
+        // One lock for the lookup, every set below can be written from a background thread
         lock (_sync)
         {
             if (_custom.Contains(trimmed) || _supplementary.Contains(trimmed) || _ignored.Contains(trimmed))
@@ -285,17 +277,16 @@ public static partial class Lang
         }
 
         // TildeTools
-        // Tried as written first. An affix dictionary is case-sensitive, so "Paris" passes and "paris" does not.
+        // As written first, affix lookup is case-sensitive: "Paris" passes, "paris" doesn't
         bool Known(WordList? list) =>
             list is not null && (list.Check(key) || (lowercase && list.Check(key.ToLower())));
     }
 
     // TildeTools
-    /// <summary>Words left alone without learning them. Cleared on restart.</summary>
+    // Cleared on restart
     private static readonly HashSet<string> _ignored = new(StringComparer.OrdinalIgnoreCase);
 
     // TildeTools
-    /// <summary>Stops flagging a word for the rest of the session.</summary>
     public static void IgnoreWord(string word)
     {
         string trimmed = word.Trim();
@@ -321,7 +312,6 @@ public static partial class Lang
     private static void ValidateAndAddWord(string candidate)
     {
         // TildeTools
-        // A candidate entry may hold several words.
         string[] splits = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (string s in splits)
@@ -329,7 +319,7 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Takes one of the user's own entries, which may hold several words.</summary>
+    // An entry may hold several words
     private static void AddCustomWord(string candidate)
     {
         foreach (string s in candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -339,7 +329,7 @@ public static partial class Lang
                 _ = _custom.Add(s);
 
                 // TildeTools
-                // Also into the dictionary, so it can be suggested and not only accepted.
+                // Into the dictionary too, so it can be suggested, not just accepted
                 Introduce(s);
             }
         }
@@ -366,7 +356,7 @@ public static partial class Lang
         Task t = new(() =>
         {
             // TildeTools
-            // Affix dictionary first. The flat lists are the fallback.
+            // Affix first, flat lists are the fallback
             bool loaded = LoadAffixDictionary();
 
             if ( !loaded )
@@ -427,8 +417,7 @@ public static partial class Lang
             _alternate = LoadPair( directory, other );
 
             // TildeTools
-            // Caught on its own. A dictionary that loaded is still worth keeping even
-            // if folding the supplied names into it goes wrong.
+            // Caught alone: a loaded dictionary is worth keeping even if folding names in fails
             try
             {
                 AbsorbSupplementary();
@@ -454,7 +443,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Reads one .aff/.dic pair, or null when it is not there.</summary>
     private static WordList? LoadPair(string directory, string name)
     {
         string affix = Path.Combine( directory, $"{name}.aff" );
@@ -532,7 +520,6 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>Loads a plain word list out of the local Dictionaries folder.</summary>
     private static bool LoadLanguageFile()
     {
         Match m = LocalDictionaryRegex().Match( Wordsmith.Configuration.DictionaryFile );
@@ -584,12 +571,12 @@ public static partial class Lang
                 return false;
 
             // TildeTools
-            // Into the dictionary too, otherwise it is accepted but never suggested.
+            // Into the dictionary too, or it's accepted but never suggested
             Introduce( trimmed );
         }
 
         // TildeTools
-        // Stored as typed. The lookup ignores case either way.
+        // Stored as typed, the lookup ignores case
         Wordsmith.Configuration.CustomDictionaryEntries.Add( trimmed );
         Wordsmith.Configuration.Save();
         return true;
@@ -607,20 +594,19 @@ public static partial class Lang
             _ = _dictionary.Remove( trimmed.ToLower() );
 
             // TildeTools
-            // Only a word we put in is ours to take back out.
+            // Only a word we put in is ours to take out
             if ( _inserted.Remove( trimmed ) && !_supplementary.Contains( trimmed ) )
                 _ = _hunspell?.Remove( trimmed );
         }
 
         // TildeTools
-        // Entries added before the custom list kept its casing are still lowercase.
+        // Entries from before the list kept casing are lowercase
         _ = Wordsmith.Configuration.CustomDictionaryEntries.Remove( trimmed );
         _ = Wordsmith.Configuration.CustomDictionaryEntries.Remove( trimmed.ToLower() );
         Wordsmith.Configuration.Save();
     }
 
     // TildeTools
-    /// <summary>Words that might have been meant instead, best first.</summary>
     internal static IReadOnlyList<string> GetSuggestions(string word)
     {
         if ( word.Length == 0 )
@@ -631,7 +617,7 @@ public static partial class Lang
             try
             {
                 // TildeTools
-                // Held for the whole call. Suggest walks the dictionary as it goes.
+                // Held for the whole call, Suggest walks the dictionary
                 lock ( _sync )
                     return Interleave(
                         _hunspell.Suggest( word ),
@@ -680,7 +666,7 @@ public static partial class Lang
     }
 
     // TildeTools
-    /// <summary>The original unranked suggestions, used when only a flat word list loaded.</summary>
+    // The original unranked ones, for when only a flat list loaded
     private static IReadOnlyList<string> LegacySuggestions(string word)
     {
         bool isCapped = WordRegex().IsMatch( word );
@@ -688,7 +674,7 @@ public static partial class Lang
         word = word.ToLower();
 
         // TildeTools
-        // GenerateAway starts first. It is by far the longest.
+        // GenerateAway first, it's by far the longest
         Task<List<string>> aways = new(() => GenerateAway(word, 2, isCapped, true));
         aways.Start();
 
@@ -777,7 +763,7 @@ public static partial class Lang
         try
         {
             // TildeTools
-            // z toggles between vowel and consonant generation.
+            // z toggles vowel and consonant passes
             for ( int z = 0; z < 2; z++ )
             {
                 for ( int x = 0; x < word.Length; ++x )
@@ -787,7 +773,7 @@ public static partial class Lang
                         char[] chars = word.ToCharArray();
 
                         // TildeTools
-                        // Vowels first. They are the more common mistake.
+                        // Vowels first, the more common mistake
                         if( "aAeEiIoOuUyY".Contains( chars[x] ) == ( z == 0 ) )
                         {
                             chars[x] = letters[y];
@@ -798,7 +784,7 @@ public static partial class Lang
                         }
 
                         // TildeTools
-                        // Wrong character type for this pass: skip its 26 letters.
+                        // Wrong type for this pass, skip its 26 letters
                         else
                         { 
                             break;

@@ -16,8 +16,7 @@ internal sealed class Git
         {
             int tries = 3;
             // TildeTools
-            // Same deal as the one below. Ask for anything modified since right now
-            // and the server says "not modified", which throws. Ask for no cache.
+            // No-cache, see below
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             while ( tries-- > 0 )
             {
@@ -56,10 +55,8 @@ internal sealed class Git
         using ( HttpClient client = new() )
         {
             // TildeTools
-            // Asking for anything modified since right now isn't a refresh. The server
-            // answers "not modified", which isn't a success code, so it throws. That
-            // cost a failed first attempt and a warning in the log on every startup.
-            // Oops. No-cache is the header that does what was wanted.
+            // "Modified since now" gets "not modified", which throws: a failed first attempt and a log
+            // warning every startup. Oops. No-cache does what was meant
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
             int tries = 3;
             while ( tries-- > 0 )

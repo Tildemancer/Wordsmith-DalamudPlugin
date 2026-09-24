@@ -532,9 +532,8 @@ internal sealed class ScratchPadUI : Window
                 if ( Wordsmith.Configuration.EnableTextHighlighting )
                 {
                     // TildeTools
-                    // A splitter's lines already carry markers and OOC tags. Drawing ours
-                    // as well showed two of each. Asked of the part, not of whether a
-                    // splitter is loaded: one that declines leaves Wordsmith's own parts.
+                    // Splitter lines carry their own markers and tags. Asked of the part: one that declines
+                    // leaves Wordsmith's own
                     bool ownDecor = !this._chunks[i].FromSplitter;
 
                     List<ChunkMarker> markers = [];
@@ -881,9 +880,8 @@ internal sealed class ScratchPadUI : Window
         if ( this._chunks.Count > 1 )
         {
             // TildeTools
-            // Scoped, so the icon font pops when the block ends. Upstream "reset" by pushing
-            // the default font on top, which left fonts on the stack every frame and tripped
-            // ImGui's PushFont/PopFont assertion.
+            // Scoped so it pops. Upstream pushed the default font on top to "reset", tripping ImGui's
+            // PushFont/PopFont assertion
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
             {
                 if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
@@ -929,7 +927,7 @@ internal sealed class ScratchPadUI : Window
                 DoClearText();
 
             // TildeTools
-            // Scoped for the same reason as the copy button's arrows.
+            // Scoped, same as the copy button's arrows
             ImGui.SameLine( 0, 0 );
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
             {
@@ -1014,8 +1012,7 @@ internal sealed class ScratchPadUI : Window
                         ImGui.Spacing();
 
                     // TildeTools
-                    // This history item's own parts and OOC setting. Upstream used the pad
-                    // being typed in, so old items got markers for the current part count.
+                    // This item's own parts and OOC. Upstream used the live pad's
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
                     {
@@ -1249,9 +1246,7 @@ internal sealed class ScratchPadUI : Window
                 return;
 
             // TildeTools
-            // With a splitter around the button sends instead of filling the clipboard,
-            // and sends the whole thing in one go. It paces the parts itself, so they
-            // are no longer walked a press at a time.
+            // With a splitter the button sends the lot, paced, instead of copying a part per press
             if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine() ) )
             {
                 if ( Wordsmith.Configuration.TrackWordStatistics )
@@ -1679,8 +1674,7 @@ internal sealed class ScratchPadUI : Window
     private static string CreateCompleteTextChunk( TextChunk chunk, bool OOC, int index, int count )
     {
         // TildeTools
-        // A line from an external splitter already carries its header, markers and
-        // tags. Building Wordsmith's on top would put two of each on every line.
+        // Splitter lines already carry header, markers and tags
         if ( chunk.FromSplitter )
             return chunk.Text;
 
@@ -1761,9 +1755,7 @@ internal sealed class ScratchPadUI : Window
     internal void FFXIVify()
     {
         // TildeTools
-        // With a splitter, the breaks fall where it puts them, so the preview here
-        // matches what goes out. Its lines come back complete, header and markers and
-        // all, so they go in as the chunk text and nothing else is set.
+        // With a splitter the breaks fall where it puts them, so the preview matches the send
         List<string>? external = Hosting.SplitterAvailable
             ? Hosting.Split( this.ComposeFullLine() )
             : null;
@@ -1805,9 +1797,8 @@ internal sealed class ScratchPadUI : Window
         string body = this.ScratchString.Unwrap();
 
         // TildeTools
-        // The OOC box, carried as tags around the whole body. The splitter moves them onto
-        // every part when its own tags match, which they do by default. Without this the
-        // box did nothing while a splitter was in charge.
+        // The OOC box as tags around the body. The splitter moves them onto every part when its tags
+        // match, which they do by default
         if ( this.UseOOC )
             body = $"{Wordsmith.Configuration.OocOpeningTag}{body}{Wordsmith.Configuration.OocClosingTag}";
 

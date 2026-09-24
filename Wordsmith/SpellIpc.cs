@@ -7,7 +7,6 @@ using Wordsmith.Helpers;
 
 namespace Wordsmith;
 
-/// <summary>Offers Wordsmith's spellchecker to other plugins.</summary>
 internal sealed partial class SpellIpc : System.IDisposable
 {
     private const int ApiVersion = 1;
@@ -38,7 +37,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         _available.SendMessage();
     }
 
-    /// <summary>Reported once, not on every keystroke.</summary>
+    // Once, not every keystroke
     private static bool _reportedState;
 
     private static void ReportState()
@@ -51,13 +50,10 @@ internal sealed partial class SpellIpc : System.IDisposable
             $"Spellcheck: answering with {Lang.WordCount} words loaded, enabled: {Lang.Enabled}.");
     }
 
-    /// <summary>Reported once. A broken result repeats every frame.</summary>
+    // Once, a broken result repeats every frame
     private static bool _reportedBadPosition;
 
-    /// <summary>
-    /// Where the word being typed starts, or the end of the text when the last
-    /// keystroke finished a word. Nothing past here gets marked.
-    /// </summary>
+    // The start of the word being typed, or the end when the last key finished one. Nothing past here is marked
     private static int UnfinishedWordAt(string text)
     {
         if (text.Length == 0)
@@ -65,7 +61,7 @@ internal sealed partial class SpellIpc : System.IDisposable
 
         char last = text[^1];
 
-        // Apostrophe and hyphen stay inside a word.
+        // Apostrophe and hyphen stay inside a word
         if (char.IsWhiteSpace(last) || (char.IsPunctuation(last) && last != '\'' && last != '-'))
             return text.Length;
 
@@ -76,7 +72,6 @@ internal sealed partial class SpellIpc : System.IDisposable
         return start;
     }
 
-    /// <summary>Where a leading slash command ends, or zero when the text is not one.</summary>
     private static int CommandEndsAt(string text)
     {
         if (text.Length == 0 || text[0] != '/')
@@ -86,7 +81,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         if (end < 0)
             return text.Length;
 
-        // A tell's target is the next word, so skip that too.
+        // A tell's target is the next word, skip that too
         if (TellRegex().IsMatch(text))
         {
             int target = text.IndexOf(' ', end + 1);
@@ -100,10 +95,7 @@ internal sealed partial class SpellIpc : System.IDisposable
     [System.Text.RegularExpressions.GeneratedRegex(@"^/(tell|t|w|whisper|send)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex TellRegex();
 
-    /// <summary>
-    /// Finds the misspelled words in a string. Positions come back flattened:
-    /// start, length, start, length.
-    /// </summary>
+    // Flattened: start, length, start, length
     private static List<int> Check(string text)
     {
         var positions = new List<int>();
@@ -122,7 +114,7 @@ internal sealed partial class SpellIpc : System.IDisposable
 
             foreach (var word in found)
             {
-                // Still being typed.
+                // Still being typed
                 if (word.WordIndex >= unfinished)
                     continue;
 
@@ -183,7 +175,7 @@ internal sealed partial class SpellIpc : System.IDisposable
         }
     }
 
-    /// <summary>Leaves a word alone for the rest of the session without learning it.</summary>
+    // For the session, without learning it
     private static bool IgnoreWord(string word)
     {
         try

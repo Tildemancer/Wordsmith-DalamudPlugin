@@ -8,10 +8,6 @@ using Newtonsoft.Json.Serialization;
 
 namespace Wordsmith;
 
-/// <summary>
-/// The bits that change when Wordsmith is not running on its own: where its settings
-/// live, and what breaks up the lines it sends.
-/// </summary>
 public static class Hosting
 {
     #region Settings file
@@ -22,16 +18,8 @@ public static class Hosting
 
     internal static bool IsHosted => _hosted;
 
-    /// <summary>
-    /// Keeps settings in Wordsmith's own file rather than the host's.
-    ///
-    /// Dalamud writes plugin settings to whichever plugin asked, and a hosted copy
-    /// asks with the host's interface. Saving through Dalamud puts Wordsmith's
-    /// settings in the host's file and wipes whatever the host had there.
-    ///
-    /// MUST be called before the plugin is constructed. The settings get read on
-    /// the way up.
-    /// </summary>
+    // Before construction. Dalamud writes settings to whoever asked, and a hosted copy asks
+    // with the host's interface, so saving through Dalamud wipes the host's file
     public static void HostInOwnFile() => _hosted = true;
 
     private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
@@ -44,7 +32,7 @@ public static class Hosting
         return Path.Combine(directory.FullName, ConfigFileName);
     }
 
-    /// <summary>Matches how Dalamud writes plugin settings. Stored objects carry a "$type".</summary>
+    // Matches how Dalamud writes settings, so stored objects carry "$type"
     private static readonly JsonSerializerSettings SerializerSettings = new()
     {
         TypeNameHandling = TypeNameHandling.Objects,
@@ -52,10 +40,7 @@ public static class Hosting
         SerializationBinder = new LocalAssemblyBinder(),
     };
 
-    /// <summary>
-    /// Resolves types named in the settings file against the running copy of Wordsmith.
-    /// Without this the serializer loads a SECOND copy of the assembly.
-    /// </summary>
+    // Resolves against the running Wordsmith, or the serializer loads a second copy of the assembly
     private sealed class LocalAssemblyBinder : DefaultSerializationBinder
     {
         private static readonly Assembly Ours = typeof(Configuration).Assembly;
@@ -63,8 +48,7 @@ public static class Hosting
 
         public override Type BindToType(string? assemblyName, string typeName)
         {
-            // Resolve the whole name, not our assembly first. A runtime generic can
-            // have our types as its arguments.
+            // Whole name, not ours first: a runtime generic can take our types as arguments
             string qualified = assemblyName == null ? typeName : $"{typeName}, {assemblyName}";
 
             Type? resolved = Type.GetType(qualified, ResolveAssembly, ResolveType, throwOnError: false);
@@ -85,10 +69,10 @@ public static class Hosting
                 : assembly.GetType(name, throwOnError: false, ignoreCase);
     }
 
-    /// <summary>Settings existed but could not be read. Saving is refused so defaults NEVER overwrite them.</summary>
+    // Settings existed but couldn't be read, so saving is refused and defaults never overwrite them
     private static bool _loadFailed;
 
-    /// <summary>Reads the settings. When hosted, Dalamud would hand back the host's settings object.</summary>
+    // Hosted, Dalamud would hand back the host's settings object
     internal static Configuration LoadConfig()
     {
         if (!_hosted)
@@ -146,12 +130,11 @@ public static class Hosting
         }
     }
 
-    /// <summary>Writes settings to a file, leaving no half-written one behind if it fails.</summary>
     private static void Write(string path, Configuration config)
     {
         string json = JsonConvert.SerializeObject(config, Formatting.Indented, SerializerSettings);
 
-        // Write beside the target, then move it into place.
+        // Written beside and moved in, so a failed write leaves no half-file
         string temporary = path + ".tmp";
         File.WriteAllText(temporary, json);
 
@@ -161,37 +144,17 @@ public static class Hosting
             File.Move(temporary, path);
     }
 
-    /// <summary>What was found in a host plugin's own settings file.</summary>
     public enum Rescued
     {
-        /// <summary>Not Wordsmith's settings. Nothing was touched.</summary>
         Nothing,
 
-        /// <summary>Wordsmith had no settings of its own, so these became them.</summary>
         Adopted,
 
-        /// <summary>Wordsmith's own settings are the better ones, so these were only set aside.</summary>
         SetAside,
     }
 
-    /// <summary>
-    /// Takes back settings that an earlier version saved into the host's own file.
-    ///
-    /// Before <see cref="HostInOwnFile"/> existed, a hosted Wordsmith went through
-    /// Dalamud, which reads and writes whichever plugin asked. So it read the host's
-    /// settings, failed to make them ours, started from defaults, then saved those
-    /// defaults over the host's file. Oops. Everything the user had tuned was still
-    /// in Wordsmith's own file, untouched.
-    ///
-    /// So a settings file of our own always wins. It holds real settings, where the
-    /// host's file holds defaults plus at most a few days of changes made while this
-    /// was broken. Those are set aside rather than thrown away.
-    ///
-    /// Runs before Wordsmith itself is up, so it must not touch anything Dalamud
-    /// fills in later. Throws rather than logs, for the same reason.
-    /// </summary>
-    /// <param name="hostConfigFile">The host plugin's own settings file.</param>
-    /// <param name="path">Where the settings ended up, when there were any.</param>
+    // Before HostInOwnFile, a hosted Wordsmith saved defaults over the host's file. Oops. Our own
+    // file always wins, the host's copy is set aside. Runs before Dalamud fills anything in, so it throws
     public static Rescued RescueSettingsFrom(FileInfo hostConfigFile, out string? path)
     {
         path = null;
@@ -202,8 +165,7 @@ public static class Hosting
 
         string text = File.ReadAllText(hostConfigFile.FullName);
 
-        // Recognised from the text rather than by deserialising, because the host's
-        // plugin may not be able to resolve our type.
+        // By text, not by deserialising: the host may not be able to resolve our type
         if (!text.Contains(typeof(Configuration).FullName + ", ", StringComparison.Ordinal))
             return Rescued.Nothing;
 
@@ -211,10 +173,7 @@ public static class Hosting
 
         if (File.Exists(mine))
         {
-            // Kept whole and unread, so whatever changed in the meantime can still be
-            // fished out by hand. Written once and never again: going back to an
-            // affected version would fill the host's file with plain defaults, and
-            // those must not replace the copy taken here.
+            // Kept whole and written once, so an affected version going back can't replace it with defaults
             string aside = mine + ".hosted";
             if (!File.Exists(aside))
                 File.Copy(hostConfigFile.FullName, aside);
@@ -237,19 +196,8 @@ public static class Hosting
 
     #region Splitting and sending
 
-    // Optional cooperation with a plugin that splits and sends chat messages.
-    //
-    // Wordsmith breaks text into pieces for copying out by hand, one at a time. With a
-    // splitter installed it does the breaking up and the sending, so the button sends
-    // the whole thing instead of filling the clipboard piece by piece.
-    //
-    // The splitter has the last word on where the breaks fall, so the pieces shown on
-    // screen are the ones that go out. Its markers and tags come with it, so
-    // Wordsmith's own are left off while it is in charge. Otherwise every line ends up
-    // wearing two sets.
-    //
-    // Every call falls back to Wordsmith's own behaviour, so with no splitter installed
-    // nothing here changes anything.
+    // Optional splitter. With one, the breaks and markers are its, and the button sends the lot.
+    // Every call falls back to Wordsmith's own behaviour
 
     private const int RequiredApiVersion = 1;
 
@@ -264,7 +212,6 @@ public static class Hosting
         _sendLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, bool>("TildeTools.Split.SendLine");
     }
 
-    /// <summary>True when a compatible splitter is installed and answering.</summary>
     internal static bool SplitterAvailable
     {
         get
@@ -280,10 +227,7 @@ public static class Hosting
         }
     }
 
-    /// <summary>
-    /// Asks the splitter how a finished chat line divides up. Null when there is no
-    /// splitter, so the caller falls back to Wordsmith's own.
-    /// </summary>
+    // Null means no splitter, fall back to Wordsmith's own
     internal static List<string>? Split(string line)
     {
         if (_splitLine == null)
@@ -300,10 +244,7 @@ public static class Hosting
         }
     }
 
-    /// <summary>
-    /// Hands a finished chat line to the splitter to send. False means it declined
-    /// and Wordsmith should do whatever it would have done.
-    /// </summary>
+    // False means it declined
     internal static bool Send(string line)
     {
         if (_sendLine == null)
