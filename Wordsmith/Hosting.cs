@@ -200,12 +200,30 @@ public static class Hosting
     private static ICallGateSubscriber<int>? _apiVersion;
     private static ICallGateSubscriber<string, int, List<string>>? _splitLine;
     private static ICallGateSubscriber<string, int, bool>? _sendLine;
+    private static ICallGateSubscriber<string, int, List<int>>? _bodySpans;
+    private static ICallGateSubscriber<string, int, List<int>>? _bodySources;
 
     internal static void Initialise()
     {
         _apiVersion = Wordsmith.PluginInterface.GetIpcSubscriber<int>("TildeTools.Split.ApiVersion");
         _splitLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Split.SplitLine");
         _sendLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, bool>("TildeTools.Split.SendLine");
+        _bodySpans = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySpans");
+        _bodySources = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySources");
+    }
+
+    // Spans: flat start, length pairs of each part's body within the part
+    // Sources: where each body starts in the line, empty if any can't be found
+    internal static (List<int> Spans, List<int> Sources) BodiesOf(string line)
+    {
+        try
+        {
+            return (_bodySpans?.InvokeFunc(line, 0) ?? [], _bodySources?.InvokeFunc(line, 0) ?? []);
+        }
+        catch
+        {
+            return ([], []);
+        }
     }
 
     internal static bool SplitterAvailable

@@ -637,7 +637,11 @@ internal sealed class ScratchPadUI : Window
             else
                 width = objWidth;
 
-            if ( corrections?.Count > 0 && corrections[0].StartIndex == word.StartIndex + chunk.StartIndex )
+            // TildeTools
+            // WordIndex, past leading punctuation: the splitter can lift an OOC tag off the first word
+            // Only BodyStart..BodyEnd is the pad's text, a splitter's prefix and suffix aren't
+            if ( corrections?.Count > 0 && word.WordLength > 0 && word.StartIndex >= chunk.BodyStart && word.StartIndex < chunk.BodyEnd
+                 && corrections[0].WordIndex == word.WordIndex + chunk.StartIndex )
                 ImGui.TextColored( Wordsmith.Configuration.SpellingErrorHighlightColor, text.Replace( "%", "%%" ) );
 
             else
@@ -1245,7 +1249,7 @@ internal sealed class ScratchPadUI : Window
                 return;
 
             // TildeTools
-            if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine() ) )
+            if ( Hosting.SplitterAvailable && Hosting.Send( this.ComposeFullLine( out _ ) ) )
             {
                 if ( Wordsmith.Configuration.TrackWordStatistics )
                     foreach ( TextChunk chunk in this._chunks )
@@ -1753,17 +1757,35 @@ internal sealed class ScratchPadUI : Window
     {
         // TildeTools
         // With a splitter the breaks fall where it puts them, so the preview matches the send
-        List<string>? external = Hosting.SplitterAvailable
-            ? Hosting.Split( this.ComposeFullLine() )
-            : null;
+        string line = this.ComposeFullLine( out int textAt );
+        List<string>? external = Hosting.SplitterAvailable ? Hosting.Split( line ) : null;
 
         if ( external != null )
         {
-            this._chunks = [.. external.Select( line => new TextChunk( line ) { FromSplitter = true } )];
+            (List<int> spans, List<int> sources) = Hosting.BodiesOf( line );
+            this._chunks = [.. external.Select( ( part, i ) => SplitterChunk( part, i, spans, sources, textAt ) )];
             return;
         }
 
         this._chunks = ChatHelper.FFXIVify( this.Header, this.ScratchString.Unwrap(), this.UseOOC ) ?? [];
+    }
+
+    // TildeTools
+    // A body word's index plus StartIndex is its index in ScratchString.Unwrap(), where the corrections are
+    // BodyEnd = 0 without a source, so nothing in the part matches
+    private static TextChunk SplitterChunk( string part, int i, List<int> spans, List<int> sources, int textAt )
+    {
+        if ( i >= sources.Count || 2 * i + 1 >= spans.Count )
+            return new TextChunk( part ) { FromSplitter = true, BodyEnd = 0 };
+
+        int start = spans[2 * i];
+        return new TextChunk( part )
+        {
+            FromSplitter = true,
+            StartIndex = sources[i] - start - textAt,
+            BodyStart = start,
+            BodyEnd = start + spans[2 * i + 1],
+        };
     }
 
     /// <summary>
@@ -1790,17 +1812,19 @@ internal sealed class ScratchPadUI : Window
     /// <summary>
     /// The pad's header and body as one chat line, the form a splitter expects.
     /// </summary>
-    internal string ComposeFullLine()
+    internal string ComposeFullLine( out int textAt )
     {
         string header = this.Header.ToString();
         string body = this.ScratchString.Unwrap();
+        string open = this.UseOOC ? Wordsmith.Configuration.OocOpeningTag : "";
 
         // TildeTools
         // The OOC box as tags around the body. The splitter moves them onto every part when its tags
         // match, which they do by default
         if ( this.UseOOC )
-            body = $"{Wordsmith.Configuration.OocOpeningTag}{body}{Wordsmith.Configuration.OocClosingTag}";
+            body = $"{open}{body}{Wordsmith.Configuration.OocClosingTag}";
 
+        textAt =( header.Length > 0 ? header.Length + 1 : 0 ) + open.Length;
         return header.Length > 0 ? $"{header} {body}" : body;
     }
 
