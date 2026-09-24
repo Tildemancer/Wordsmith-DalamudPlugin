@@ -45,10 +45,8 @@ public static partial class Lang
     private static readonly object _sync = new();
 
     // TildeTools
-    // Bumped by every change to what counts as a word, so a cached check knows it's stale
-    private static int _generation;
-
-    public static int Generation => _generation;
+    // Bumped under _sync by every change to what counts as a word
+    public static int Generation { get; private set; }
 
     /// <summary>
     /// Accepts a set of names as correctly spelled, and as words worth suggesting.
@@ -93,7 +91,7 @@ public static partial class Lang
                 Introduce( word, track: false );
             }
 
-            _generation++;
+            Generation++;
         }
 
         batch.Clear();
@@ -140,7 +138,7 @@ public static partial class Lang
             foreach ( string word in wanted )
                 _ = _transient.Add( word );
 
-            _generation++;
+            Generation++;
 
             if ( !suggest || _hunspell is null )
                 return;
@@ -225,7 +223,7 @@ public static partial class Lang
             _transient.Clear();
             _transientInserted.Clear();
             _ignored.Clear();
-            _generation++;
+            Generation++;
         }
 
         Enabled = false;
@@ -302,7 +300,7 @@ public static partial class Lang
         lock (_sync)
         {
             _ = _ignored.Add(trimmed);
-            _generation++;
+            Generation++;
         }
     }
 
@@ -378,7 +376,7 @@ public static partial class Lang
 
                 // TildeTools
                 lock ( _sync )
-                    _generation++;
+                    Generation++;
 
                 // TildeTools
                 // The first check compiles the checker and wakes the dictionary, about 20 ms on the frame of the first paste
@@ -575,7 +573,7 @@ public static partial class Lang
                 return false;
 
             // TildeTools
-            _generation++;
+            Generation++;
 
             // TildeTools
             Introduce( trimmed );
@@ -599,7 +597,7 @@ public static partial class Lang
             _ = _dictionary.Remove( trimmed.ToLower() );
 
             // TildeTools
-            _generation++;
+            Generation++;
 
             // TildeTools
             // Only a word we put in is ours to take out
