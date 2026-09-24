@@ -50,8 +50,6 @@ internal sealed partial class SpellIpc : System.IDisposable
             $"Spellcheck: answering with {Lang.WordCount} words loaded, enabled: {Lang.Enabled}.");
     }
 
-    private static bool _reportedBadPosition;
-
     // The start of the word being typed, or the end when the last key finished one. Nothing past here is marked
     private static int UnfinishedWordAt(string text)
     {
@@ -119,23 +117,8 @@ internal sealed partial class SpellIpc : System.IDisposable
 
             foreach (var (index, length) in found)
             {
-                if (index >= unfinished)
+                if (index < commandEnds || index >= unfinished)
                     continue;
-
-                if (index < commandEnds)
-                    continue;
-
-                if (index < 0 || length < 1)
-                {
-                    if (!_reportedBadPosition)
-                    {
-                        _reportedBadPosition = true;
-                        Wordsmith.PluginLog.Warning(
-                            $"Spellcheck: a flagged word had no usable position: index {index}, length {length}.");
-                    }
-
-                    continue;
-                }
 
                 positions.Add(index);
                 positions.Add(length);
