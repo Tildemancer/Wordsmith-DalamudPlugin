@@ -19,6 +19,10 @@ public static partial class Lang
     private static WordList? _alternate;
 
     // TildeTools
+    // en_US, in whichever slot: the smaller list, of commoner words, where the British one has rarer ones too
+    private static WordList? _us;
+
+    // TildeTools
     private static readonly HashSet<string> _dictionary = [];
 
     // TildeTools
@@ -228,8 +232,7 @@ public static partial class Lang
     {
         lock ( _sync )
         {
-            _hunspell = null;
-            _alternate = null;
+            (_hunspell, _alternate, _us) = (null, null, null);
 
             _dictionary.Clear();
             _custom.Clear();
@@ -474,7 +477,7 @@ public static partial class Lang
                 if ( token != _loadToken )
                     return true;
 
-                (_hunspell, _alternate) = (hunspell, alternate);
+                (_hunspell, _alternate, _us) = (hunspell, alternate, name == "en_US" ? hunspell : alternate);
 
                 // TildeTools
                 // A loaded dictionary is worth keeping even if folding names in fails
@@ -496,8 +499,7 @@ public static partial class Lang
         }
         catch ( Exception e )
         {
-            _hunspell = null;
-            _alternate = null;
+            (_hunspell, _alternate, _us) = (null, null, null);
             Wordsmith.PluginLog.Error( $"Unable to load an affix dictionary.\n{e}" );
             return false;
         }
@@ -672,10 +674,7 @@ public static partial class Lang
                 // Held for the whole call, Suggest walks the dictionary
                 // Checked again inside, Unload can null it while a lookup waits for the lock
                 lock ( _sync )
-                    return _hunspell is null ? [] : Interleave(
-                        _hunspell.Suggest( word ),
-                        _alternate?.Suggest( word ) ?? [],
-                        Wordsmith.Configuration.MaximumSuggestions );
+                    return _hunspell is null ? [] : Rank( word, _hunspell.Suggest( word ), _alternate?.Suggest( word ) ?? [] );
             }
             catch ( Exception e )
             {
@@ -716,6 +715,49 @@ public static partial class Lang
         }
 
         return merged;
+    }
+
+    // TildeTools
+    // Both lists in turn, reordered: a name the word begins, then words the US list knows, then the rest
+    // Plain interleaving gave the British list's rare words every other place: Gridan came up Grid an, Gradin, Grid-an, Gridania
+    // Caller holds _sync
+    private static IReadOnlyList<string> Rank(string word, IEnumerable<string> first, IEnumerable<string> second)
+    {
+        IReadOnlyList<string> merged = Interleave( first, second, int.MaxValue );
+
+        // TildeTools
+        // "Grid-an" beside "Grid an" is the same split twice, "reals e" splits off a stray letter
+        bool Dropped(string s) => s.Split( ' ', '-' ) is { Length: > 1 } parts
+            && ( s.Contains( '-' ) && merged.Contains( s.Replace( '-', ' ' ) )
+                || parts.Any( p => p.Length == 1 && p is not ("a" or "A" or "I") ) );
+
+        bool Completes(string s) => word.Length >= 4 && char.IsUpper( s[0] ) && !s.Contains( ' ' )
+            && s.StartsWith( word, StringComparison.OrdinalIgnoreCase );
+
+        return [.. merged.Where( s => !Dropped( s ) )
+            .OrderBy( s => Completes( s ) ? 0 : Common( s ) ? 1 : 2 )
+            .Take( Wordsmith.Configuration.MaximumSuggestions )];
+    }
+
+    // TildeTools
+    // colour, centre, realise, analyse, catalogue, defence, travelled, anaemia, foetus, programme, grey
+    private static readonly (string British, string American)[] Spellings =
+    [
+        ("our", "or"), ("tre", "ter"), ("ise", "ize"), ("isa", "iza"), ("yse", "yze"), ("ogue", "og"),
+        ("ence", "ense"), ("ll", "l"), ("ae", "e"), ("oe", "e"), ("mme", "m"), ("grey", "gray"),
+    ];
+
+    // TildeTools
+    // A taught name, a word the US list knows, or its British spelling
+    // A split counts when every part does
+    private static bool Common(string word)
+    {
+        if ( word.Split( ' ', '-' ) is { Length: > 1 } parts )
+            return parts.All( Common );
+
+        return _us is null || _supplementary.Contains( word ) || _transient.Contains( word ) || _custom.Contains( word )
+            || _us.Check( word ) || Spellings.Any( s => word.IndexOf( s.British, StringComparison.OrdinalIgnoreCase ) is var at and >= 0
+                && _us.Check( word[..at] + s.American + word[( at + s.British.Length )..] ) );
     }
 
     // TildeTools
