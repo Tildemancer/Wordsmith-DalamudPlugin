@@ -97,8 +97,6 @@ public sealed class Wordsmith : IDalamudPlugin
     [PluginService]
     internal static IPluginLog PluginLog { get; private set; } = null!;
 
-    private SpellIpc? _spellIpc;
-
     [PluginService]
     internal static ITextureProvider TextureProvider { get; private set; } = null!;
 
@@ -131,32 +129,11 @@ public sealed class Wordsmith : IDalamudPlugin
     /// </summary>
     public Wordsmith()
     {
-        try
-        {
-            Construct();
-        }
-        catch
-        {
-            // TildeTools
-            // Gates go back first, or they're still held next load and a taken name throws again.
-            // Each step guarded, a half-built plugin can fail its own teardown
-            try { this._spellIpc?.Dispose(); } catch { /* nothing left to try */ }
-            try { DisposeInner(); } catch { /* nothing left to try */ }
-
-            throw;
-        }
-    }
-
-    private void Construct()
-    {
         // Get the configuration.
         Configuration = Hosting.LoadConfig();
 
         // TildeTools
         Hosting.Initialise();
-
-        // TildeTools
-        _spellIpc = new SpellIpc();
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
 
@@ -200,12 +177,6 @@ public sealed class Wordsmith : IDalamudPlugin
     /// </summary>
     public void Dispose()
     {
-        this._spellIpc?.Dispose();
-        DisposeInner();
-    }
-
-    private void DisposeInner()
-    {
         // Remove events.
         PluginInterface.UiBuilder.Draw -= WordsmithUI.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= WordsmithUI.ShowSettings;
@@ -220,8 +191,6 @@ public sealed class Wordsmith : IDalamudPlugin
         WordsmithUI.Dispose();
 
         // TildeTools
-        // Static, so inside a host they'd outlive the module, holding ~20MB
-        Lang.Unload();
         Hosting.Shutdown();
     }
 

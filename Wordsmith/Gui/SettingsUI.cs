@@ -1020,6 +1020,16 @@ internal sealed partial class SettingsUI : Window
                     ImGui.Separator();
                 }
 
+                // TildeTools
+                // Hosted, the dictionary list and the added words are TildeTools', on its Spelling tab
+                if ( Hosting.IsHosted )
+                {
+                    ImGui.TextWrapped( "The dictionaries and the words you've added are on TildeTools' Spelling tab." );
+                    ImGui.EndChild();
+                    ImGui.EndTabItem();
+                    return;
+                }
+
                 // Dictionaries
 
                 List<string> dictionaries = [];

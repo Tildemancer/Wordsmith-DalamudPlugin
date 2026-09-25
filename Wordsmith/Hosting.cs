@@ -226,6 +226,9 @@ public static class Hosting
         _sendLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, bool>("TildeTools.Split.SendLine");
         _bodySpans = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySpans");
         _bodySources = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySources");
+        _isWord = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.IsWord");
+        _suggest = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Spell.SuggestNow");
+        _addToDictionary = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.AddToDictionary");
     }
 
     // Spans: flat start, length pairs of each part's body within the part
@@ -285,6 +288,40 @@ public static class Hosting
         catch
         {
             return false;
+        }
+    }
+
+    #endregion
+
+    #region Spelling
+
+    private static ICallGateSubscriber<string, bool>? _isWord;
+    private static ICallGateSubscriber<string, int, List<string>>? _suggest;
+    private static ICallGateSubscriber<string, bool>? _addToDictionary;
+
+    // TildeTools' Spelling module answers, as typed: "Gridania" passes, "gridania" doesn't
+    // With it off, every word passes
+    internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
+
+    // most: Wordsmith's own count, 0 for all
+    internal static List<string> Suggest(string word, int most) => Ask(_suggest, gate => gate.InvokeFunc(word, most), []);
+
+    internal static bool AddToDictionary(string word) => Ask(_addToDictionary, gate => gate.InvokeFunc(word), false);
+
+    // HasFunction first, or with Spelling off every word the pad checks is a throw
+    private static TOut Ask<TGate, TOut>(TGate? gate, Func<TGate, TOut> call, TOut failed)
+        where TGate : class, ICallGateSubscriber
+    {
+        if (gate is not { HasFunction: true })
+            return failed;
+
+        try
+        {
+            return call(gate);
+        }
+        catch
+        {
+            return failed;
         }
     }
 
