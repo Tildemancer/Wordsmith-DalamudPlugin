@@ -29,6 +29,7 @@ public static partial class Lang
     /// <param name="key">String to search for.</param>
     /// <param name="lowercase">If <see langword="true"/> then the string is made lowercase.</param>
     /// <returns><see langword="true""/> if the word is in the dictionary</returns>
+    // TildeTools
     public static bool IsWord(string key, bool lowercase) => Hosting.IsHosted ? Hosting.IsWord(key) : _dictionary.Contains(lowercase ? key.ToLower() : key);
 
     private static void ValidateAndAddWord(string candidate)
@@ -215,6 +216,7 @@ public static partial class Lang
     /// <returns><see langword="true"/> if the word was not in the dictionary already.</returns>
     public static bool AddDictionaryEntry(string word)
     {
+        // TildeTools
         if ( Hosting.IsHosted )
             return Hosting.AddToDictionary( word );
 
@@ -249,6 +251,7 @@ public static partial class Lang
         if ( word.Length == 0 )
             throw new Exception( $"GetSuggestions({word}) failed. Word must have length." );
 
+        // TildeTools
         if ( Hosting.IsHosted )
             return Hosting.Suggest( word, Wordsmith.Configuration.MaximumSuggestions );
 
