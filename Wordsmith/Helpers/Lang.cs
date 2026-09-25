@@ -298,13 +298,17 @@ public static partial class Lang
             if (_hunspell is null)
                 return _dictionary.Contains(lowercase ? key.ToLower() : key);
 
-            return Known(_hunspell) || Known(_alternate);
+            // TildeTools
+            // Halves from either list: "well-travelled" is US's "well" and GB's "travelled", once GB drops the words US has
+            return Known(key) || key.Split('-', '–', '—') is { Length: > 1 } halves && halves.All(half => half.Length == 0 || Known(half));
         }
+
+        bool Known(string word) => In(_hunspell, word) || In(_alternate, word);
 
         // TildeTools
         // As written first, affix lookup is case-sensitive: "Paris" passes, "paris" doesn't
-        bool Known(WordList? list) =>
-            list is not null && (list.Check(key) || (lowercase && list.Check(key.ToLower())));
+        bool In(WordList? list, string word) =>
+            list is not null && (list.Check(word) || (lowercase && list.Check(word.ToLower())));
     }
 
     // TildeTools
