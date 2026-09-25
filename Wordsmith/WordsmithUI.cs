@@ -316,7 +316,14 @@ internal static class WordsmithUI
     /// <summary>
     /// Shows and/or creates ThesaurusUI.
     /// </summary>
-    internal static void ShowThesaurus() { if ( !ShowWindow( typeof( ThesaurusUI ) ) ) AddWindow( new ThesaurusUI() { IsOpen = true } ); }
+    internal static void ShowThesaurus()
+    {
+        // TildeTools
+        if ( Hosting.ShowLookup() )
+            return;
+
+        if ( !ShowWindow( typeof( ThesaurusUI ) ) ) AddWindow( new ThesaurusUI() { IsOpen = true } );
+    }
 
     /// <summary>
     /// Shows a <see cref="Window"/> if it exists.

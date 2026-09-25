@@ -229,6 +229,7 @@ public static class Hosting
         _isWord = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.IsWord");
         _suggest = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Spell.SuggestNow");
         _addToDictionary = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.AddToDictionary");
+        _lookup = Wordsmith.PluginInterface.GetIpcSubscriber<bool>("TildeTools.Spell.Lookup");
     }
 
     // Spans: flat start, length pairs of each part's body within the part
@@ -298,6 +299,7 @@ public static class Hosting
     private static ICallGateSubscriber<string, bool>? _isWord;
     private static ICallGateSubscriber<string, int, List<string>>? _suggest;
     private static ICallGateSubscriber<string, bool>? _addToDictionary;
+    private static ICallGateSubscriber<bool>? _lookup;
 
     // TildeTools' Spelling module answers, as typed: "Gridania" passes, "gridania" doesn't
     // With it off, every word passes
@@ -307,6 +309,9 @@ public static class Hosting
     internal static List<string> Suggest(string word, int most) => Ask(_suggest, gate => gate.InvokeFunc(word, most), []);
 
     internal static bool AddToDictionary(string word) => Ask(_addToDictionary, gate => gate.InvokeFunc(word), false);
+
+    // The thesaurus is TildeTools' Define window, offline and with no Merriam-Webster requests. False with Spelling off
+    internal static bool ShowLookup() => _hosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
 
     // HasFunction first, or with Spelling off every word the pad checks is a throw
     private static TOut Ask<TGate, TOut>(TGate? gate, Func<TGate, TOut> call, TOut failed)
