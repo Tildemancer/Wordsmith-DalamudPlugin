@@ -113,7 +113,8 @@ internal sealed partial class SettingsUI : Window
                 DrawGeneralTab();
                 DrawScratchPadTab();
                 DrawAliasesTab();
-                DrawSpellCheckTab();
+                // TildeTools
+                if ( Hosting.IsHosted ) DrawHostedSpellCheckTab(); else DrawSpellCheckTab();
                 DrawLinkshellTab();
                 DrawColorsTab();
                 ImGui.EndTabBar();
@@ -986,13 +987,6 @@ internal sealed partial class SettingsUI : Window
 
     private void DrawSpellCheckTab()
     {
-        // TildeTools
-        if ( Hosting.IsHosted )
-        {
-            DrawHostedSpellCheckTab();
-            return;
-        }
-
         if (ImGui.BeginTabItem("Spell Check##SettingsUITabItem"))
         {
             if (ImGui.BeginChild("DictionarySettingsChild", new(-1, GetCanvasSize() ) ))

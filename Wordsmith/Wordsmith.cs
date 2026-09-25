@@ -114,15 +114,6 @@ public sealed class Wordsmith : IDalamudPlugin
     /// </summary>
     internal static WebManifest WebManifest { get; private set; } = null!;
 
-    /// <summary>
-    /// The author's donation link, for a host that gathers its credits in one place.
-    ///
-    /// Exposed as the address alone so the host need not see the manifest type, and
-    /// read from the manifest rather than written down anywhere, since the author can
-    /// change where it points. Empty until the manifest has been fetched.
-    /// </summary>
-    public static string KofiUrl => WebManifest?.Kofi ?? string.Empty;
-
     #region Constructor and Disposer
     /// <summary>
     /// Default constructor and initializer for the Wordsmith plugin.
@@ -130,9 +121,8 @@ public sealed class Wordsmith : IDalamudPlugin
     public Wordsmith()
     {
         // Get the configuration.
-        Configuration = Hosting.LoadConfig();
-
         // TildeTools
+        Configuration = Hosting.LoadConfig();
         Hosting.Initialise();
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
@@ -152,17 +142,7 @@ public sealed class Wordsmith : IDalamudPlugin
         // TildeTools
         // Off the draw thread: three blocking HTTP attempts froze the game. Nothing needs it at startup
         WebManifest = new();
-        _ = System.Threading.Tasks.Task.Run( () =>
-        {
-            try
-            {
-                WebManifest = Git.GetManifest();
-            }
-            catch ( Exception e )
-            {
-                PluginLog.Error( $"Could not fetch the web manifest.\n{e}" );
-            }
-        } );
+        _ = System.Threading.Tasks.Task.Run( () => WebManifest = Git.GetManifest() );
 
         // Register handlers for draw and openconfig events.
         PluginInterface.UiBuilder.Draw += WordsmithUI.Draw;
@@ -189,7 +169,6 @@ public sealed class Wordsmith : IDalamudPlugin
 
         // Dispose of the UI
         WordsmithUI.Dispose();
-
         // TildeTools
         Hosting.Shutdown();
     }

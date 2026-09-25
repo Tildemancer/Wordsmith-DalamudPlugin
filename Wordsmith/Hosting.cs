@@ -26,6 +26,15 @@ public static class Hosting
         Wordsmith.PluginInterface.UiBuilder.OpenConfigUi -= WordsmithUI.ShowSettings;
     }
 
+    /// <summary>
+    /// The author's donation link, for a host that gathers its credits in one place.
+    ///
+    /// Exposed as the address alone so the host need not see the manifest type, and
+    /// read from the manifest rather than written down anywhere, since the author can
+    /// change where it points. Empty until the manifest has been fetched.
+    /// </summary>
+    public static string KofiUrl => Wordsmith.WebManifest?.Kofi ?? string.Empty;
+
     private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
 
     private static string PathBeside(FileInfo other) =>

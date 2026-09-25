@@ -550,7 +550,7 @@ internal sealed class ScratchPadUI : Window
                             markers.Add( cm );
                     }
 
-                    DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections, ownDecor );
+                    DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
                 }
                 else
                 {
@@ -574,7 +574,7 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     /// <param name="chunk">Chunk to be drawn.</param>
     /// <param name="ct">Chat type to display with the chunk.</param>
-    private static void DrawChunkItem( TextChunk chunk, ChatType ct, bool ooc, int index, int chunkCount, float spaceWidth, List<ChunkMarker> lMarkers, List<Word>? corrections, bool continuation = true )
+    private static void DrawChunkItem( TextChunk chunk, ChatType ct, bool ooc, int index, int chunkCount, float spaceWidth, List<ChunkMarker> lMarkers, List<Word>? corrections )
     {
         // Don't attempt to draw null chunks.
         if ( chunk is null )
@@ -684,7 +684,7 @@ internal sealed class ScratchPadUI : Window
 
         // If we are to draw the continuation marker then use the same DrawMarkers system 
         // TildeTools: off when a splitter's line already carries its own count.
-        if ( continuation && chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
+        if ( !chunk.FromSplitter && chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
             DrawMarkers( [new( Wordsmith.Configuration.ContinuationMarker, 0, 0, 0 )] );
 
         // Draw the after continuation markers
@@ -894,14 +894,12 @@ internal sealed class ScratchPadUI : Window
             // Scoped so it pops. Upstream pushed the default font on top to "reset", tripping ImGui's
             // PushFont/PopFont assertion
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
-            {
                 if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
                 {
                     --this._nextChunk;
                     if ( this._nextChunk < 0 )
                         this._nextChunk = this._chunks.Count - 1;
                 }
-            }
 
             // Draw the copy button with no spacing.
             ImGui.SameLine( 0, 0 );
@@ -910,14 +908,12 @@ internal sealed class ScratchPadUI : Window
 
             ImGui.SameLine( 0, 0 );
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
-            {
                 if ( ImGui.Button( $"{(char)0xF101}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
                 {
                     ++this._nextChunk;
                     if ( this._nextChunk >= this._chunks.Count )
                         this._nextChunk = 0;
                 }
-            }
         }
         else // If there is only one chunk simply draw a normal button.
         {
@@ -940,10 +936,8 @@ internal sealed class ScratchPadUI : Window
             // TildeTools
             ImGui.SameLine( 0, 0 );
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
-            {
                 if ( ImGui.Button( $"{(char)0xF0E2}##{this.ID}UndoClearButton", new( Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
                     UndoClearText();
-            }
         }
         else // If there is only one chunk simply draw a normal button.
         {
@@ -1770,19 +1764,11 @@ internal sealed class ScratchPadUI : Window
     /// parts it will become. Without one the button still walks the pieces a press
     /// at a time, and the label tracks which is next.
     /// </summary>
-    private string ButtonLabel()
-    {
-        // TildeTools
-        // Where the parts came from, not whether a splitter is loaded: off, it declines and the button copies
-        if ( this._chunks.Count > 0 && this._chunks[0].FromSplitter )
-        {
-            string parts = this._chunks.Count > 1 ? $" ({this._chunks.Count} parts)" : "";
-            return $"Post{parts}##ScratchPad{this.ID}";
-        }
-
-        string position = this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "";
-        return $"Copy{position}##ScratchPad{this.ID}";
-    }
+    // TildeTools
+    // Where the parts came from, not whether a splitter is loaded: off, it declines and the button copies
+    private string ButtonLabel() => this._chunks.Count > 0 && this._chunks[0].FromSplitter
+        ? $"Post{(this._chunks.Count > 1 ? $" ({this._chunks.Count} parts)" : "")}##ScratchPad{this.ID}"
+        : $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}";
 
     /// <summary>
     /// Returns the default height of the text input.

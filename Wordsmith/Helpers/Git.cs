@@ -39,7 +39,7 @@ internal sealed class Git
                 catch ( Exception e )
                 {
                     // Disable the IfModifiedSince header to avoid a 304 response error.
-                    client.DefaultRequestHeaders.CacheControl = null;
+                    client.DefaultRequestHeaders.IfModifiedSince = null;
                     Wordsmith.PluginLog.Warning( $"Failed to get manifest. Tries remaining {tries}. Error: {e.Message}\nRaw: {raw}" );
                 }
             }
@@ -70,7 +70,7 @@ internal sealed class Git
                 catch ( Exception e )
                 {
                     // Disable refresh request.
-                    client.DefaultRequestHeaders.CacheControl = null;
+                    client.DefaultRequestHeaders.IfModifiedSince = null;
                     Wordsmith.PluginLog.Warning( $"Error loading dictionary from web: {e.Message}" );
                 }
             }            
