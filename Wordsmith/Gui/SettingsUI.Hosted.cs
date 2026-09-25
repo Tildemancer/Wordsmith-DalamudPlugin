@@ -9,8 +9,8 @@ namespace Wordsmith.Gui;
 internal sealed partial class SettingsUI
 {
     // Hosted, Lang loads no dictionary, so upstream's dictionary list and added words would do nothing
-    // Its own tab rather than a return from inside upstream's, which would have to end that tab's child and item by hand
-    // Upstream's settings above those still apply, and so does the cleaning string: Wordsmith's own checker runs, asking TildeTools
+    // Its own tab: returning inside upstream's would need its EndChild and EndTabItem by hand
+    // Upstream's other settings still apply, the cleaning string too: Wordsmith's own checker runs, asking TildeTools
     private void DrawHostedSpellCheckTab()
     {
         using var tab = ImRaii.TabItem("Spell Check##SettingsUITabItem");

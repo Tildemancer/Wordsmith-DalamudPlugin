@@ -19,7 +19,7 @@ public static class Hosting
     // with the host's interface, so saving through Dalamud wipes the host's file
     public static void HostInOwnFile() => IsHosted = true;
 
-    // After construction, so the host's Open and Settings buttons in the installer open only the host
+    // After construction, which subscribes them to the host's buttons
     public static void ReleaseInstallerButtons()
     {
         Wordsmith.PluginInterface.UiBuilder.OpenMainUi -= WordsmithUI.ShowScratchPad;
@@ -222,7 +222,6 @@ public static class Hosting
     }
 
     // With a splitter the breaks fall where it puts them, so the preview matches the send
-    // Null when SplitLine is off, throws or returns no parts
     // Spans: flat start, length pairs of each part's body within the part
     // Sources: where each body starts in the line, empty if any can't be found
     // A body word's index plus StartIndex is its index in ScratchString.Unwrap(), where the corrections are
@@ -251,24 +250,20 @@ public static class Hosting
     private static ICallGateSubscriber<string, bool>? _addToDictionary;
     private static ICallGateSubscriber<bool>? _lookup;
 
-    // TildeTools' Spelling module answers, given the word as typed
-    // Lang.IsWord's lowercase goes unused, Speller.IsWord tries as typed and then lowercase itself
-    // With it off, every word passes
+    // Lang.IsWord's lowercase goes unused, Speller.IsWord tries as typed then lowercase
     internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
 
-    // most: Wordsmith's own count, 0 for all
+    // most: 0 for all
     internal static List<string> Suggest(string word, int most) => Ask(_suggest, gate => gate.InvokeFunc(word, most), []);
 
     internal static bool AddToDictionary(string word) => Ask(_addToDictionary, gate => gate.InvokeFunc(word), false);
 
-    // The thesaurus is TildeTools' Define window, not Merriam-Webster's API on the author's key
-    // False with Spelling off
+    // TildeTools' Define window, not Merriam-Webster's API on the author's key
     internal static bool ShowLookup() => IsHosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
 
     #endregion
 
-    // HasFunction first: with the answering module off, every call would throw
-    // IsWord alone would throw once for every word the pad checks
+    // HasFunction first: with the module off, IsWord would throw once per word the pad checks
     private static TOut Ask<TGate, TOut>(TGate? gate, Func<TGate, TOut> call, TOut failed)
         where TGate : class, ICallGateSubscriber
     {

@@ -61,7 +61,7 @@ public static partial class Lang
     private static void Init(bool notify)
     {
         // TildeTools
-        // Hosted, TildeTools' Spelling has the dictionaries: nothing to download or read
+        // Hosted, TildeTools' Spelling has the dictionaries
         if ( Hosting.IsHosted )
         {
             Enabled = true;
