@@ -1284,7 +1284,10 @@ internal sealed partial class SettingsUI : Window
 
             // Leave the first column blank for spacing.
             _ = ImGui.TableNextColumn();
-            if ( ImGui.Button( $"Found A Bug?", new(-1, Wordsmith.BUTTON_Y.Scale() ) ))
+            // TildeTools
+            // No support links on a modified build
+            if ( !Hosting.IsHosted && ImGui.Button( $"Found A Bug?", new(-1, Wordsmith.BUTTON_Y.Scale() ) ))
+            // TildeTools ends
             {
                 WordsmithUI.ShowMessageBox( "Found a bug?", "If you found a bug, please post as much useful information as possible.\nThe more you are able to share with me the faster I can find the problem and fix it.\nUseful information could be:\n\t* Screenshots\n\t* Description of what you were doing\n\t* Number of pads open\n\t* Dalamud.log file\n\t* Wordsmith.json config file\n\nGo to GitHub to report the bug?", MessageBox.ButtonStyle.YesNo, (m) =>
                 {
