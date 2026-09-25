@@ -239,7 +239,7 @@ public static class Hosting
 
     internal static bool SplitterAvailable => Ask(_apiVersion, gate => gate.InvokeFunc() >= RequiredApiVersion, false);
 
-    // Null for nothing to use
+    // Null when SplitLine is off, throws or returns no parts
     internal static List<string>? Split(string line) => Ask(_splitLine, gate => gate.InvokeFunc(line, 0), []) is { Count: > 0 } chunks ? chunks : null;
 
     internal static bool Send(string line) => Ask(_sendLine, gate => gate.InvokeFunc(line, 0), false);
@@ -269,7 +269,8 @@ public static class Hosting
 
     #endregion
 
-    // HasFunction first, or with the module that answers off every call is a throw, one per word the pad checks
+    // HasFunction first: with the answering module off, every call would throw
+    // IsWord alone would throw once for every word the pad checks
     private static TOut Ask<TGate, TOut>(TGate? gate, Func<TGate, TOut> call, TOut failed)
         where TGate : class, ICallGateSubscriber
     {
