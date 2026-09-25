@@ -237,6 +237,7 @@ public static partial class Lang
             _inserted.Clear();
             _transient.Clear();
             _transientInserted.Clear();
+            _transientFor = default;
             _ignored.Clear();
             Generation++;
             _loadToken++;
