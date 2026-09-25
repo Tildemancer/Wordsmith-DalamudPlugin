@@ -521,6 +521,7 @@ internal sealed class TextChunk
     internal bool FromSplitter { get; init; }
     internal int BodyStart { get; init; }
     internal int BodyEnd { get; init; } = int.MaxValue;
+    // TildeTools ends
 
     /// <summary>
     /// Default constructor.

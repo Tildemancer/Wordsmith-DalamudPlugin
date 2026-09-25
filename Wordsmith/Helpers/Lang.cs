@@ -31,6 +31,7 @@ public static partial class Lang
     /// <returns><see langword="true""/> if the word is in the dictionary</returns>
     // TildeTools
     public static bool IsWord(string key, bool lowercase) => Hosting.IsHosted ? Hosting.IsWord(key) : _dictionary.Contains(lowercase ? key.ToLower() : key);
+    // TildeTools ends
 
     private static void ValidateAndAddWord(string candidate)
     {
@@ -67,6 +68,7 @@ public static partial class Lang
             Enabled = true;
             return;
         }
+        // TildeTools ends
 
         ValidateConfiguration();
         _dictionary.Clear();
@@ -219,6 +221,7 @@ public static partial class Lang
         // TildeTools
         if ( Hosting.IsHosted )
             return Hosting.AddToDictionary( word );
+        // TildeTools ends
 
         // Add the word to the currently loaded dictionary.
         if (_dictionary.Add(word.Trim().ToLower()))
@@ -254,6 +257,7 @@ public static partial class Lang
         // TildeTools
         if ( Hosting.IsHosted )
             return Hosting.Suggest( word, Wordsmith.Configuration.MaximumSuggestions );
+        // TildeTools ends
 
         // Check if the first character is capitalized.
         bool isCapped = WordRegex().IsMatch( word ); //"ABCDEFGHIJKLMNOPQRSTUVWXYZ".Contains(word[0]);

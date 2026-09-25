@@ -124,6 +124,7 @@ public sealed class Wordsmith : IDalamudPlugin
         // TildeTools
         Configuration = Hosting.LoadConfig();
         Hosting.Initialise();
+        // TildeTools ends
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
 
@@ -143,6 +144,7 @@ public sealed class Wordsmith : IDalamudPlugin
         // Off the draw thread: three blocking HTTP attempts froze the game. Nothing needs it at startup
         WebManifest = new();
         _ = System.Threading.Tasks.Task.Run( () => WebManifest = Git.GetManifest() );
+        // TildeTools ends
 
         // Register handlers for draw and openconfig events.
         PluginInterface.UiBuilder.Draw += WordsmithUI.Draw;
@@ -171,6 +173,7 @@ public sealed class Wordsmith : IDalamudPlugin
         WordsmithUI.Dispose();
         // TildeTools
         Hosting.Shutdown();
+        // TildeTools ends
     }
 
     internal static void ResetConfig()

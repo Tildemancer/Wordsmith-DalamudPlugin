@@ -115,6 +115,7 @@ internal sealed partial class SettingsUI : Window
                 DrawAliasesTab();
                 // TildeTools
                 if ( Hosting.IsHosted ) DrawHostedSpellCheckTab(); else DrawSpellCheckTab();
+                // TildeTools ends
                 DrawLinkshellTab();
                 DrawColorsTab();
                 ImGui.EndTabBar();
@@ -1297,6 +1298,7 @@ internal sealed partial class SettingsUI : Window
             // TildeTools
             // Lady Defile's Ko-fi button lives on our Credits tab now. The link still
             // comes from her web manifest
+            // TildeTools ends
 
             //Skip the next column.
             _ = ImGui.TableNextColumn();

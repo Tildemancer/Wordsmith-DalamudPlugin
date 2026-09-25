@@ -249,6 +249,7 @@ public sealed class Configuration : IPluginConfiguration
     {
         // TildeTools
         Hosting.SaveConfig(this);
+        // TildeTools ends
         if( notify )
         {
             _ = Wordsmith.NotificationManager.AddNotification( new()

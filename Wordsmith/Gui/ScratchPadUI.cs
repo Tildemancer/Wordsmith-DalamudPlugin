@@ -81,6 +81,7 @@ internal sealed class ScratchPadUI : Window
     private bool _invalidateChunks = false;
     // TildeTools
     private int _splitterSeen;
+    // TildeTools ends
 
     /// <summary>
     /// The text used by the replacement inputtext.
@@ -263,6 +264,7 @@ internal sealed class ScratchPadUI : Window
         // Moves on TildeTools.Split.Available: the splitter's settings, the chat box's channel or the /r target
         this._invalidateChunks |= this._splitterSeen != Hosting.SplitterGeneration;
         this._splitterSeen = Hosting.SplitterGeneration;
+        // TildeTools ends
 
         // If the text chunks have been invalidated then update them
         if ( this._invalidateChunks )
@@ -551,6 +553,7 @@ internal sealed class ScratchPadUI : Window
                     }
 
                     DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
+                    // TildeTools ends
                 }
                 else
                 {
@@ -650,6 +653,7 @@ internal sealed class ScratchPadUI : Window
             if ( corrections?.Count > 0 && word.WordLength > 0 && word.StartIndex >= chunk.BodyStart && word.StartIndex < chunk.BodyEnd
                  && corrections[0].WordIndex == word.WordIndex + chunk.StartIndex )
                 ImGui.TextColored( Wordsmith.Configuration.SpellingErrorHighlightColor, text.Replace( "%", "%%" ) );
+            // TildeTools ends
 
             else
                 ImGui.Text( text.Replace( "%", "%%" ) );
@@ -914,6 +918,7 @@ internal sealed class ScratchPadUI : Window
                     if ( this._nextChunk >= this._chunks.Count )
                         this._nextChunk = 0;
                 }
+            // TildeTools ends
         }
         else // If there is only one chunk simply draw a normal button.
         {
@@ -938,6 +943,7 @@ internal sealed class ScratchPadUI : Window
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
                 if ( ImGui.Button( $"{(char)0xF0E2}##{this.ID}UndoClearButton", new( Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
                     UndoClearText();
+            // TildeTools ends
         }
         else // If there is only one chunk simply draw a normal button.
         {
@@ -1023,6 +1029,7 @@ internal sealed class ScratchPadUI : Window
                         if( cm.AppliesTo( i, tlist.Count ) && cm.Visible( pad.UseOOC, tlist.Count ) )
                             markers.Add( cm );
                     }
+                    // TildeTools ends
 
                     DrawChunkItem( tlist[i], pad.Header!.ChatType, pad.UseOOC, i, tlist.Count, fSpaceWidth, markers, null );
                 }
@@ -1263,6 +1270,7 @@ internal sealed class ScratchPadUI : Window
 
                 return;
             }
+            // TildeTools ends
 
             // Copy the next chunk over.
             ImGui.SetClipboardText( CreateCompleteTextChunk( this._chunks[this._nextChunk], this.UseOOC, this._nextChunk, this._chunks.Count ) );
@@ -1679,6 +1687,7 @@ internal sealed class ScratchPadUI : Window
         // TildeTools
         if ( chunk.FromSplitter )
             return chunk.Text;
+        // TildeTools ends
 
         // Build a string with:
         string result = chunk.Header.Length > 0 ? $"{chunk.Header} " : "";
@@ -1764,11 +1773,11 @@ internal sealed class ScratchPadUI : Window
     /// parts it will become. Without one the button still walks the pieces a press
     /// at a time, and the label tracks which is next.
     /// </summary>
-    // TildeTools
     // Where the parts came from, not whether a splitter is loaded: off, it declines and the button copies
     private string ButtonLabel() => this._chunks.Count > 0 && this._chunks[0].FromSplitter
         ? $"Post{(this._chunks.Count > 1 ? $" ({this._chunks.Count} parts)" : "")}##ScratchPad{this.ID}"
         : $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}";
+    // TildeTools ends
 
     /// <summary>
     /// Returns the default height of the text input.

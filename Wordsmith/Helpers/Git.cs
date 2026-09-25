@@ -17,6 +17,7 @@ internal sealed class Git
             int tries = 3;
             // TildeTools
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
+            // TildeTools ends
             while ( tries-- > 0 )
             {
                 string raw = "";
@@ -57,6 +58,7 @@ internal sealed class Git
             // "Modified since now" gets "not modified", which throws: a failed first attempt and a log
             // warning every startup. Oops. No-cache does what was meant
             client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
+            // TildeTools ends
             int tries = 3;
             while ( tries-- > 0 )
             {
