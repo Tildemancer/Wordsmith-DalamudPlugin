@@ -322,10 +322,15 @@ public static partial class Lang
     }
 
     // TildeTools
-    // A word list read whole, then published only if Unload hasn't run since Init, like the affix dictionary
+    // A word list's lines, skipping # comments and blanks, published only if Unload hasn't run since Init, like the affix dictionary
     // True either way, it did load, so the caller tries no other and sees the token moved
-    private static bool Publish( HashSet<string> words, int token )
+    private static bool Publish( string[] lines, int token )
     {
+        HashSet<string> words = [];
+        foreach ( string l in lines )
+            if ( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
+                ValidateAndAddWord( l, words );
+
         lock ( _sync )
         {
             if ( token == _loadToken )
@@ -552,15 +557,8 @@ public static partial class Lang
             if ( lines.Length == 0 )
                 throw new Exception();
 
-            HashSet<string> words = [];
-
-            foreach( string l in lines )
-            {
-                if( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
-                    ValidateAndAddWord( l, words );
-            }
-
-            return Publish( words, token );
+            // TildeTools
+            return Publish( lines, token );
         }
         catch (HttpRequestException e)
         {
@@ -596,17 +594,7 @@ public static partial class Lang
 
         try
         {
-            string[] lines = File.ReadAllLines(filepath);
-
-            HashSet<string> words = [];
-
-            foreach( string l in lines )
-            {
-                if( !l.StartsWith( '#' ) && l.Trim().Length > 0 )
-                    ValidateAndAddWord( l, words );
-            }
-
-            return Publish( words, token );
+            return Publish( File.ReadAllLines(filepath), token );
         }
         catch (Exception e)
         {
