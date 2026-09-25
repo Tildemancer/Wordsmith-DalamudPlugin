@@ -1,6 +1,5 @@
 // TildeTools: written for this fork, not part of upstream Wordsmith.
 
-using System.Collections.Generic;
 using System.Reflection;
 using Dalamud.Plugin.Ipc;
 using Newtonsoft.Json;
@@ -14,13 +13,11 @@ public static class Hosting
 
     private const string ConfigFileName = "Wordsmith.json";
 
-    private static bool _hosted;
-
-    internal static bool IsHosted => _hosted;
+    internal static bool IsHosted { get; private set; }
 
     // Before construction. Dalamud writes settings to whoever asked, and a hosted copy asks
     // with the host's interface, so saving through Dalamud wipes the host's file
-    public static void HostInOwnFile() => _hosted = true;
+    public static void HostInOwnFile() => IsHosted = true;
 
     // After construction, so the host's Open and Settings buttons in the installer open only the host
     public static void ReleaseInstallerButtons()
@@ -31,13 +28,8 @@ public static class Hosting
 
     private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
 
-    private static string PathBeside(FileInfo other)
-    {
-        DirectoryInfo directory = other.Directory
-            ?? throw new InvalidOperationException("Dalamud's configuration folder is unavailable.");
-
-        return Path.Combine(directory.FullName, ConfigFileName);
-    }
+    private static string PathBeside(FileInfo other) =>
+        Path.Combine(other.DirectoryName ?? throw new InvalidOperationException("Dalamud's configuration folder is unavailable."), ConfigFileName);
 
     // Matches how Dalamud writes settings, so stored objects carry "$type"
     private static readonly JsonSerializerSettings SerializerSettings = new()
@@ -57,12 +49,7 @@ public static class Hosting
         {
             // Whole name, not ours first: a runtime generic can take our types as arguments
             string qualified = assemblyName == null ? typeName : $"{typeName}, {assemblyName}";
-
-            Type? resolved = Type.GetType(qualified, ResolveAssembly, ResolveType, throwOnError: false);
-            if (resolved != null)
-                return resolved;
-
-            return base.BindToType(assemblyName, typeName);
+            return Type.GetType(qualified, ResolveAssembly, ResolveType, throwOnError: false) ?? base.BindToType(assemblyName, typeName);
         }
 
         private static Assembly? ResolveAssembly(AssemblyName name) =>
@@ -82,67 +69,52 @@ public static class Hosting
     // Hosted, Dalamud would hand back the host's settings object
     internal static Configuration LoadConfig()
     {
-        if (!_hosted)
+        if (!IsHosted)
             return Wordsmith.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         _loadFailed = false;
+        string path = ConfigPath;
 
         try
         {
-            string path = ConfigPath;
             if (!File.Exists(path))
                 return new Configuration();
 
-            Configuration? loaded = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(path), SerializerSettings);
-            if (loaded != null)
+            if (JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(path), SerializerSettings) is { } loaded)
                 return loaded;
 
-            _loadFailed = true;
             Wordsmith.PluginLog.Error($"Wordsmith's settings at {path} read as empty; they will not be overwritten.");
         }
         catch (Exception e)
         {
-            _loadFailed = true;
-            Wordsmith.PluginLog.Error(
-                $"Could not read Wordsmith's settings at {ConfigPath}. " +
-                $"Running on defaults; the file will NOT be overwritten.\n{e}");
+            Wordsmith.PluginLog.Error($"Could not read Wordsmith's settings at {path}. Running on defaults; the file will NOT be overwritten.\n{e}");
         }
 
+        _loadFailed = true;
         return new Configuration();
     }
 
     internal static void SaveConfig(Configuration config)
     {
-        if (!_hosted)
-        {
+        if (!IsHosted)
             Wordsmith.PluginInterface.SavePluginConfig(config);
-            return;
-        }
-
-        if (_loadFailed)
-        {
-            Wordsmith.PluginLog.Warning(
-                "Refusing to save Wordsmith's settings: the existing ones could not be read, " +
-                "and writing now would replace them with defaults.");
-            return;
-        }
-
-        try
-        {
-            Write(ConfigPath, config);
-        }
-        catch (Exception e)
-        {
-            Wordsmith.PluginLog.Error($"Could not save Wordsmith's settings.\n{e}");
-        }
+        else if (_loadFailed)
+            Wordsmith.PluginLog.Warning("Refusing to save Wordsmith's settings: the existing ones could not be read, and writing now would replace them with defaults.");
+        else
+            try
+            {
+                Write(ConfigPath, config);
+            }
+            catch (Exception e)
+            {
+                Wordsmith.PluginLog.Error($"Could not save Wordsmith's settings.\n{e}");
+            }
     }
 
     private static void Write(string path, Configuration config)
     {
-        string json = JsonConvert.SerializeObject(config, Formatting.Indented, SerializerSettings);
-
         string temporary = path + ".tmp";
-        File.WriteAllText(temporary, json);
+        File.WriteAllText(temporary, JsonConvert.SerializeObject(config, Formatting.Indented, SerializerSettings));
 
         if (File.Exists(path))
             File.Replace(temporary, path, path + ".bak", ignoreMetadataErrors: true);
@@ -150,14 +122,7 @@ public static class Hosting
             File.Move(temporary, path);
     }
 
-    public enum Rescued
-    {
-        Nothing,
-
-        Adopted,
-
-        SetAside,
-    }
+    public enum Rescued { Nothing, Adopted, SetAside }
 
     // Before HostInOwnFile, a hosted Wordsmith saved defaults over the host's file. Oops. Our own
     // file always wins, the host's copy is set aside. Runs before Dalamud fills anything in, so it throws
@@ -232,17 +197,41 @@ public static class Hosting
         _lookup = Wordsmith.PluginInterface.GetIpcSubscriber<bool>("TildeTools.Spell.Lookup");
     }
 
+    private static bool SplitterAvailable => Ask(_apiVersion, gate => gate.InvokeFunc() >= RequiredApiVersion, false);
+
+    /// <summary>
+    /// The pad's header and body as one chat line, the form a splitter expects.
+    /// </summary>
+    // The OOC box as tags around the body. The splitter moves them onto every part when its tags
+    // match, which they do by default
+    private static string FullLine(Gui.ScratchPadUI pad, out int textAt)
+    {
+        string prefix = pad.Header.ToString() is { Length: > 0 } header ? $"{header} " : "";
+        string open = pad.UseOOC ? Wordsmith.Configuration.OocOpeningTag : "";
+        textAt = prefix.Length + open.Length;
+        return $"{prefix}{open}{pad.ScratchString.Unwrap()}{(pad.UseOOC ? Wordsmith.Configuration.OocClosingTag : "")}";
+    }
+
+    // With a splitter the breaks fall where it puts them, so the preview matches the send
+    // Null when SplitLine is off, throws or returns no parts
     // Spans: flat start, length pairs of each part's body within the part
     // Sources: where each body starts in the line, empty if any can't be found
-    internal static (List<int> Spans, List<int> Sources) BodiesOf(string line) =>
-        (Ask(_bodySpans, gate => gate.InvokeFunc(line, 0), []), Ask(_bodySources, gate => gate.InvokeFunc(line, 0), []));
+    // A body word's index plus StartIndex is its index in ScratchString.Unwrap(), where the corrections are
+    // BodyEnd = 0 without a source, so nothing in the part matches
+    internal static List<TextChunk>? Split(Gui.ScratchPadUI pad)
+    {
+        string line = FullLine(pad, out int textAt);
+        if (!SplitterAvailable || Ask(_splitLine, gate => gate.InvokeFunc(line, 0), []) is not { Count: > 0 } parts)
+            return null;
 
-    internal static bool SplitterAvailable => Ask(_apiVersion, gate => gate.InvokeFunc() >= RequiredApiVersion, false);
+        List<int> spans = Ask(_bodySpans, gate => gate.InvokeFunc(line, 0), []);
+        List<int> sources = Ask(_bodySources, gate => gate.InvokeFunc(line, 0), []);
+        return [.. parts.Select((part, i) => i < sources.Count && 2 * i + 1 < spans.Count
+            ? new TextChunk(part) { FromSplitter = true, StartIndex = sources[i] - spans[2 * i] - textAt, BodyStart = spans[2 * i], BodyEnd = spans[2 * i] + spans[2 * i + 1] }
+            : new TextChunk(part) { FromSplitter = true, BodyEnd = 0 })];
+    }
 
-    // Null when SplitLine is off, throws or returns no parts
-    internal static List<string>? Split(string line) => Ask(_splitLine, gate => gate.InvokeFunc(line, 0), []) is { Count: > 0 } chunks ? chunks : null;
-
-    internal static bool Send(string line) => Ask(_sendLine, gate => gate.InvokeFunc(line, 0), false);
+    internal static bool Send(Gui.ScratchPadUI pad) => SplitterAvailable && Ask(_sendLine, gate => gate.InvokeFunc(FullLine(pad, out _), 0), false);
 
     #endregion
 
@@ -265,7 +254,7 @@ public static class Hosting
 
     // The thesaurus is TildeTools' Define window, not Merriam-Webster's API on the author's key
     // False with Spelling off
-    internal static bool ShowLookup() => _hosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
+    internal static bool ShowLookup() => IsHosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
 
     #endregion
 
