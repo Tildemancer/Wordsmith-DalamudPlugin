@@ -22,6 +22,13 @@ public static class Hosting
     // with the host's interface, so saving through Dalamud wipes the host's file
     public static void HostInOwnFile() => _hosted = true;
 
+    // After construction, so the host's Open and Settings buttons in the installer open only the host
+    public static void ReleaseInstallerButtons()
+    {
+        Wordsmith.PluginInterface.UiBuilder.OpenMainUi -= WordsmithUI.ShowScratchPad;
+        Wordsmith.PluginInterface.UiBuilder.OpenConfigUi -= WordsmithUI.ShowSettings;
+    }
+
     private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
 
     private static string PathBeside(FileInfo other)
