@@ -1021,10 +1021,19 @@ internal sealed partial class SettingsUI : Window
                 }
 
                 // TildeTools
-                // Hosted, the dictionary list and the added words are TildeTools', on its Spelling tab
+                // Hosted, Lang loads no dictionary, so the list and the added words below would do nothing
+                // The cleaning string still trims the words the pad checks, so it stays
                 if ( Hosting.IsHosted )
                 {
                     ImGui.TextWrapped( "The dictionaries and the words you've added are on TildeTools' Spelling tab." );
+
+                    if ( Wordsmith.Configuration.ShowAdvancedSettings )
+                    {
+                        ImGui.SetNextItemWidth( ImGui.GetContentRegionMax().X - this._style.WindowPadding.X - ImGui.CalcTextSize( "Cleaning String" ).X );
+                        _ = ImGui.InputText( "Cleaning String", ref this._punctuationCleaningString, 1024 );
+                        ImGuiExt.SetHoveredTooltip( "This is the complete list of punctuation to be cleaned from the start/end of the word when checking for spelling errors.\nWARNING: Altering this can cause undesired behavior." );
+                    }
+
                     ImGui.EndChild();
                     ImGui.EndTabItem();
                     return;
