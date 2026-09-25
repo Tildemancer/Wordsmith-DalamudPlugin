@@ -234,63 +234,15 @@ public static class Hosting
 
     // Spans: flat start, length pairs of each part's body within the part
     // Sources: where each body starts in the line, empty if any can't be found
-    internal static (List<int> Spans, List<int> Sources) BodiesOf(string line)
-    {
-        try
-        {
-            return (_bodySpans?.InvokeFunc(line, 0) ?? [], _bodySources?.InvokeFunc(line, 0) ?? []);
-        }
-        catch
-        {
-            return ([], []);
-        }
-    }
+    internal static (List<int> Spans, List<int> Sources) BodiesOf(string line) =>
+        (Ask(_bodySpans, gate => gate.InvokeFunc(line, 0), []), Ask(_bodySources, gate => gate.InvokeFunc(line, 0), []));
 
-    internal static bool SplitterAvailable
-    {
-        get
-        {
-            try
-            {
-                return _apiVersion != null && _apiVersion.InvokeFunc() >= RequiredApiVersion;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
+    internal static bool SplitterAvailable => Ask(_apiVersion, gate => gate.InvokeFunc() >= RequiredApiVersion, false);
 
-    internal static List<string>? Split(string line)
-    {
-        if (_splitLine == null)
-            return null;
+    // Null for nothing to use
+    internal static List<string>? Split(string line) => Ask(_splitLine, gate => gate.InvokeFunc(line, 0), []) is { Count: > 0 } chunks ? chunks : null;
 
-        try
-        {
-            List<string> chunks = _splitLine.InvokeFunc(line, 0);
-            return chunks is { Count: > 0 } ? chunks : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    internal static bool Send(string line)
-    {
-        if (_sendLine == null)
-            return false;
-
-        try
-        {
-            return _sendLine.InvokeFunc(line, 0);
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    internal static bool Send(string line) => Ask(_sendLine, gate => gate.InvokeFunc(line, 0), false);
 
     #endregion
 
@@ -301,7 +253,8 @@ public static class Hosting
     private static ICallGateSubscriber<string, bool>? _addToDictionary;
     private static ICallGateSubscriber<bool>? _lookup;
 
-    // TildeTools' Spelling module answers, as typed: "Gridania" passes, "gridania" doesn't
+    // TildeTools' Spelling module answers, given the word as typed
+    // Lang.IsWord's lowercase goes unused, Speller.IsWord tries as typed and then lowercase itself
     // With it off, every word passes
     internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
 
@@ -310,10 +263,13 @@ public static class Hosting
 
     internal static bool AddToDictionary(string word) => Ask(_addToDictionary, gate => gate.InvokeFunc(word), false);
 
-    // The thesaurus is TildeTools' Define window, offline and with no Merriam-Webster requests. False with Spelling off
+    // The thesaurus is TildeTools' Define window, not Merriam-Webster's API on the author's key
+    // False with Spelling off
     internal static bool ShowLookup() => _hosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
 
-    // HasFunction first, or with Spelling off every word the pad checks is a throw
+    #endregion
+
+    // HasFunction first, or with the module that answers off every call is a throw, one per word the pad checks
     private static TOut Ask<TGate, TOut>(TGate? gate, Func<TGate, TOut> call, TOut failed)
         where TGate : class, ICallGateSubscriber
     {
@@ -329,6 +285,4 @@ public static class Hosting
             return failed;
         }
     }
-
-    #endregion
 }
