@@ -15,8 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- TildeTools -->
     <!-- The icon is left out
          mwlogo is read at runtime by the scratch pad's help window -->
+    <!-- TildeTools ends -->
     <Content Include="..\images\mwlogo.png" Link="mwlogo.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

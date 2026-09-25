@@ -1,7 +1,9 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Interface.Utility;
+// TildeTools
 using Dalamud.Interface.Utility.Raii;
+// TildeTools ends
 using Dalamud.Bindings.ImGui;
 using Wordsmith.Enums;
 using Wordsmith.Helpers;
@@ -687,9 +689,11 @@ internal sealed class ScratchPadUI : Window
         DrawMarkers( [.. lMarkers.Where( x => x.Position == MarkerPosition.AfterOOC )] );
 
         // If we are to draw the continuation marker then use the same DrawMarkers system 
-        // TildeTools: off when a splitter's line already carries its own count.
+        // TildeTools
+        // Off when a splitter's line already carries its own count
         if ( !chunk.FromSplitter && chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
             DrawMarkers( [new( Wordsmith.Configuration.ContinuationMarker, 0, 0, 0 )] );
+        // TildeTools ends
 
         // Draw the after continuation markers
         DrawMarkers( [.. lMarkers.Where( x => x.Position == MarkerPosition.AfterContinuationMarker )] );
@@ -922,8 +926,10 @@ internal sealed class ScratchPadUI : Window
         }
         else // If there is only one chunk simply draw a normal button.
         {
+            // TildeTools
             if ( ImGui.Button( ButtonLabel(), new( width, Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoCopyToClipboard();
+            // TildeTools ends
         }
     }
 
