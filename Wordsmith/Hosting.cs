@@ -1,9 +1,11 @@
 // TildeTools: written for this fork, not part of upstream Wordsmith.
 
 using System.Reflection;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Ipc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Wordsmith.Gui;
 
 namespace Wordsmith;
 
@@ -24,6 +26,21 @@ public static class Hosting
     {
         Wordsmith.PluginInterface.UiBuilder.OpenMainUi -= WordsmithUI.ShowScratchPad;
         Wordsmith.PluginInterface.UiBuilder.OpenConfigUi -= WordsmithUI.ShowSettings;
+    }
+
+    private static SettingsUI? _settings;
+
+    // Drawn in TildeTools' tab, never among WordsmithUI's windows
+    // See WordsmithUI.ShowSettings
+    public static Window Settings => _settings ??= new SettingsUI();
+
+    internal static bool ShowSettings()
+    {
+        if (!IsHosted)
+            return false;
+
+        Settings.IsOpen = true;
+        return true;
     }
 
     /// <summary>
@@ -186,7 +203,12 @@ public static class Hosting
 
     private static void SplitterChanged() => SplitterGeneration++;
 
-    internal static void Shutdown() => _available?.Unsubscribe(SplitterChanged);
+    // A restart reads a new Configuration, so the settings window goes too
+    internal static void Shutdown()
+    {
+        _available?.Unsubscribe(SplitterChanged);
+        _settings = null;
+    }
 
     internal static void Initialise()
     {
