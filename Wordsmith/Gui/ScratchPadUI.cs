@@ -261,11 +261,8 @@ internal sealed class ScratchPadUI : Window
 
         // TildeTools
         // Moves on TildeTools.Split.Available: the splitter's settings, the chat box's channel or the /r target
-        if ( this._splitterSeen != Hosting.SplitterGeneration )
-        {
-            this._splitterSeen = Hosting.SplitterGeneration;
-            this._invalidateChunks = true;
-        }
+        this._invalidateChunks |= this._splitterSeen != Hosting.SplitterGeneration;
+        this._splitterSeen = Hosting.SplitterGeneration;
 
         // If the text chunks have been invalidated then update them
         if ( this._invalidateChunks )
