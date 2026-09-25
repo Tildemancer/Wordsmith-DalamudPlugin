@@ -28,10 +28,7 @@ public static class Hosting
 
     /// <summary>
     /// The author's donation link, for a host that gathers its credits in one place.
-    ///
-    /// Exposed as the address alone so the host need not see the manifest type, and
-    /// read from the manifest rather than written down anywhere, since the author can
-    /// change where it points. Empty until the manifest has been fetched.
+    /// Empty until the manifest has been fetched.
     /// </summary>
     public static string KofiUrl => Wordsmith.WebManifest?.Kofi ?? string.Empty;
 
@@ -258,7 +255,7 @@ public static class Hosting
 
     internal static bool AddToDictionary(string word) => Ask(_addToDictionary, gate => gate.InvokeFunc(word), false);
 
-    // TildeTools' Define window, not Merriam-Webster's API on the author's key
+    // TildeTools' Define window, not Merriam-Webster's API
     internal static bool ShowLookup() => IsHosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
 
     #endregion
