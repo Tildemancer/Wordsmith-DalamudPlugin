@@ -986,6 +986,13 @@ internal sealed partial class SettingsUI : Window
 
     private void DrawSpellCheckTab()
     {
+        // TildeTools
+        if ( Hosting.IsHosted )
+        {
+            DrawHostedSpellCheckTab();
+            return;
+        }
+
         if (ImGui.BeginTabItem("Spell Check##SettingsUITabItem"))
         {
             if (ImGui.BeginChild("DictionarySettingsChild", new(-1, GetCanvasSize() ) ))
@@ -1018,25 +1025,6 @@ internal sealed partial class SettingsUI : Window
                     _ = ImGui.DragFloat( "Auto-Spellcheck Delay (Seconds)", ref this._autospellcheckdelay, 0.1f, 0.1f, 100f );
                     ImGuiExt.SetHoveredTooltip( "The time in seconds to wait after typing stops to spell check." );
                     ImGui.Separator();
-                }
-
-                // TildeTools
-                // Hosted, Lang loads no dictionary, so the list and the added words below would do nothing
-                // The cleaning string still trims the words the pad checks, so it stays
-                if ( Hosting.IsHosted )
-                {
-                    ImGui.TextWrapped( "The dictionaries and the words you've added are on TildeTools' Spelling tab." );
-
-                    if ( Wordsmith.Configuration.ShowAdvancedSettings )
-                    {
-                        ImGui.SetNextItemWidth( ImGui.GetContentRegionMax().X - this._style.WindowPadding.X - ImGui.CalcTextSize( "Cleaning String" ).X );
-                        _ = ImGui.InputText( "Cleaning String", ref this._punctuationCleaningString, 1024 );
-                        ImGuiExt.SetHoveredTooltip( "This is the complete list of punctuation to be cleaned from the start/end of the word when checking for spelling errors.\nWARNING: Altering this can cause undesired behavior." );
-                    }
-
-                    ImGui.EndChild();
-                    ImGui.EndTabItem();
-                    return;
                 }
 
                 // Dictionaries
