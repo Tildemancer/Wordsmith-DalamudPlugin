@@ -114,24 +114,35 @@ public static class Hosting
         }
 
         _loadFailed = true;
+        Wordsmith.NotificationManager.AddNotification(new() { Title = "Wordsmith", Content = $"Couldn't read its settings, so none are saved until {path} is fixed or removed.", Type = Dalamud.Interface.ImGuiNotification.NotificationType.Warning });
         return new Configuration();
     }
 
-    internal static void SaveConfig(Configuration config)
+    // False when refused or failed, so the save isn't reported done
+    internal static bool SaveConfig(Configuration config)
     {
         if (!IsHosted)
+        {
             Wordsmith.PluginInterface.SavePluginConfig(config);
-        else if (_loadFailed)
+            return true;
+        }
+
+        if (_loadFailed)
+        {
             Wordsmith.PluginLog.Warning("Refusing to save Wordsmith's settings: the existing ones could not be read, and writing now would replace them with defaults.");
-        else
-            try
-            {
-                Write(ConfigPath, config);
-            }
-            catch (Exception e)
-            {
-                Wordsmith.PluginLog.Error($"Could not save Wordsmith's settings.\n{e}");
-            }
+            return false;
+        }
+
+        try
+        {
+            Write(ConfigPath, config);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Wordsmith.PluginLog.Error($"Could not save Wordsmith's settings.\n{e}");
+            return false;
+        }
     }
 
     private static void Write(string path, Configuration config)

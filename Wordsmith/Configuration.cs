@@ -248,7 +248,7 @@ public sealed class Configuration : IPluginConfiguration
     internal void Save(bool notify = true)
     {
         // TildeTools
-        Hosting.SaveConfig(this);
+        notify &= Hosting.SaveConfig(this);
         // TildeTools ends
         if( notify )
         {
