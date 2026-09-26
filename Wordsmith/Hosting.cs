@@ -201,7 +201,7 @@ public static class Hosting
 
     #region Splitting and sending
 
-    private const int RequiredApiVersion = 1;
+    private const int RequiredApiVersion = 2;
 
     private static ICallGateSubscriber<int>? _apiVersion;
     private static ICallGateSubscriber<string, int, List<string>>? _splitLine;
