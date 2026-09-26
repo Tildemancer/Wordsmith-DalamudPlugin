@@ -142,7 +142,6 @@ public static class Hosting
     // Lang.IsWord's lowercase goes unused, Speller.IsWord tries as typed then lowercase
     internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
 
-    // most: 0 for all
     // As many as TildeTools' Spelling tab offers
     internal static List<string> Suggest(string word) => Ask(_suggest, gate => gate.InvokeFunc(word, 0), []);
 
