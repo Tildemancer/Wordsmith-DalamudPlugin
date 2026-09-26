@@ -138,7 +138,8 @@ public static class Hosting
     internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
 
     // most: 0 for all
-    internal static List<string> Suggest(string word, int most) => Ask(_suggest, gate => gate.InvokeFunc(word, most), []);
+    // As many as TildeTools' Spelling tab offers
+    internal static List<string> Suggest(string word) => Ask(_suggest, gate => gate.InvokeFunc(word, 0), []);
 
     internal static bool AddToDictionary(string word) => Ask(_addToDictionary, gate => gate.InvokeFunc(word), false);
 

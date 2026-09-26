@@ -256,7 +256,7 @@ public static partial class Lang
 
         // TildeTools
         if ( Hosting.IsHosted )
-            return Hosting.Suggest( word, Wordsmith.Configuration.MaximumSuggestions );
+            return Hosting.Suggest( word );
         // TildeTools ends
 
         // Check if the first character is capitalized.

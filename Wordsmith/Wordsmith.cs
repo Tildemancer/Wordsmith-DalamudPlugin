@@ -141,7 +141,8 @@ public sealed class Wordsmith : IDalamudPlugin
 
 
         // TildeTools
-        // Off the draw thread: three blocking HTTP attempts froze the game. Nothing needs it at startup
+        // Off the draw thread: GetManifest's 3 blocking HTTP tries froze the game
+        // Hosted, nothing reads it at startup (Lang.Init returns early)
         WebManifest = new();
         _ = System.Threading.Tasks.Task.Run( () => WebManifest = Git.GetManifest() );
         // TildeTools ends

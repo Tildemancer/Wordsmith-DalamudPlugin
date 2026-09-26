@@ -34,22 +34,15 @@ internal sealed partial class SettingsUI
         ImGui.Separator();
 
         var advanced = Wordsmith.Configuration.ShowAdvancedSettings;
-        var barWidth = advanced ? ImGui.GetWindowContentRegionMax().X / 2.0f : ImGui.GetWindowContentRegionMax().X;
-
-        ImGui.SetNextItemWidth(barWidth - 170 * ImGuiHelpers.GlobalScale);
-        _ = ImGui.DragInt("Maximum Suggestions", ref this._maxSuggestions, 0.1f, 0, 100);
-        ImGuiExt.SetHoveredTooltip("The number of spelling suggestions to return with spell checking. 0 is unlimited results.");
-
         if (advanced)
         {
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(barWidth - 160 * ImGuiHelpers.GlobalScale);
+            ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X / 2.0f - 160 * ImGuiHelpers.GlobalScale);
             _ = ImGui.DragFloat("Auto-Spellcheck Delay (Seconds)", ref this._autospellcheckdelay, 0.1f, 0.1f, 100f);
             ImGuiExt.SetHoveredTooltip("The time in seconds to wait after typing stops to spell check.");
             ImGui.Separator();
         }
 
-        ImGui.TextWrapped("The dictionaries and the words you've added are on TildeTools' Spelling tab.");
+        ImGui.TextWrapped("The dictionaries, the words you've added and how many corrections to offer are on TildeTools' Spelling tab.");
 
         if (!advanced)
             return;
