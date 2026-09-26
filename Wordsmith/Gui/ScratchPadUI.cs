@@ -1276,6 +1276,10 @@ internal sealed class ScratchPadUI : Window
 
                 return;
             }
+
+            // False for the splitter's own parts is a refusal it has printed
+            if ( this._chunks[0].FromSplitter )
+                return;
             // TildeTools ends
 
             // Copy the next chunk over.
