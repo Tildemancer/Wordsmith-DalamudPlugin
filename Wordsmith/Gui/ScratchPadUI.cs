@@ -547,20 +547,14 @@ internal sealed class ScratchPadUI : Window
 
                 if ( Wordsmith.Configuration.EnableTextHighlighting )
                 {
-                    // TildeTools
-                    // Splitter lines carry their own markers and tags. Asked of the part: one that declines
-                    // leaves Wordsmith's own
-                    bool ownDecor = !this._chunks[i].FromSplitter;
-
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
                     {
-                        if( ownDecor && cm.AppliesTo( i, this._chunks.Count ) && cm.Visible( this.UseOOC, this._chunks.Count ) )
+                        if( cm.AppliesTo( i, this._chunks.Count ) && cm.Visible( this.UseOOC, this._chunks.Count ) )
                             markers.Add( cm );
                     }
 
-                    DrawChunkItem( this._chunks[i], this.Header.ChatType, ownDecor && this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
-                    // TildeTools ends
+                    DrawChunkItem( this._chunks[i], this.Header.ChatType, this.UseOOC, i, this._chunks.Count, fSpaceWidth, markers, this._corrections );
                 }
                 else
                 {
@@ -589,6 +583,12 @@ internal sealed class ScratchPadUI : Window
         // Don't attempt to draw null chunks.
         if ( chunk is null )
             return;
+
+        // TildeTools
+        // A splitter part's Text is the whole sent line, see CreateCompleteTextChunk
+        ooc &= !chunk.FromSplitter;
+        lMarkers = chunk.FromSplitter ? [] : lMarkers;
+        // TildeTools ends
 
         float width = 0f;
         bool sameLine = false;
@@ -695,7 +695,6 @@ internal sealed class ScratchPadUI : Window
 
         // If we are to draw the continuation marker then use the same DrawMarkers system 
         // TildeTools
-        // Off when a splitter's line already carries its own count
         if ( !chunk.FromSplitter && chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
             DrawMarkers( [new( Wordsmith.Configuration.ContinuationMarker, 0, 0, 0 )] );
         // TildeTools ends
@@ -901,11 +900,10 @@ internal sealed class ScratchPadUI : Window
     private void DrawCopyButton( float width )
     {
         // If there is more than 1 chunk.
-        if ( this._chunks.Count > 1 )
+        // TildeTools
+        if ( this._chunks.Count > 1 && !this._chunks[0].FromSplitter )
         {
-            // TildeTools
-            // Scoped so it pops. Upstream pushed the default font on top to "reset", tripping ImGui's
-            // PushFont/PopFont assertion
+            // Upstream pushed DefaultFont to "reset" and never popped, tripping ImGui's PushFont/PopFont assertion
             using ( ImRaii.PushFont( UiBuilder.IconFont ) )
                 if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
                 {
@@ -1033,7 +1031,7 @@ internal sealed class ScratchPadUI : Window
                         ImGui.Spacing();
 
                     // TildeTools
-                    // This item's own parts and OOC. Upstream used the live pad's
+                    // Upstream used the live pad's this._chunks.Count and this.UseOOC
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
                     {
@@ -1781,14 +1779,7 @@ internal sealed class ScratchPadUI : Window
     // TildeTools
     internal void FFXIVify() => this._chunks = Hosting.Split( this ) ?? ChatHelper.FFXIVify( this.Header, this.ScratchString.Unwrap(), this.UseOOC ) ?? [];
 
-    /// <summary>
-    /// The label on the send button.
-    ///
-    /// With a splitter the whole message goes at once, so the label counts the
-    /// parts it will become. Without one the button still walks the pieces a press
-    /// at a time, and the label tracks which is next.
-    /// </summary>
-    // Where the parts came from, not whether a splitter is loaded: off, it declines and the button copies
+    // Keyed on FromSplitter, not SplitterAvailable: only the splitter's own parts are posted
     private string ButtonLabel() => this._chunks.Count > 0 && this._chunks[0].FromSplitter
         ? $"Post{(this._chunks.Count > 1 ? $" ({this._chunks.Count} parts)" : "")}##ScratchPad{this.ID}"
         : $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}";
