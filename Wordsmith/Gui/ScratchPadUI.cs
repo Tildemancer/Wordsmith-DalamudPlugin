@@ -578,6 +578,28 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     /// <param name="chunk">Chunk to be drawn.</param>
     /// <param name="ct">Chat type to display with the chunk.</param>
+    // TildeTools
+    // A tell's target runs on: <t>, or First Last with any @World
+    private static int CommandEnd( string line )
+    {
+        if ( !line.StartsWith( '/' ) )
+            return 0;
+
+        int end = line.IndexOf( ' ' );
+        if ( end < 0 )
+            return line.Length;
+
+        string command = line[1..end];
+        if ( !command.Equals( "t", StringComparison.OrdinalIgnoreCase ) && !command.Equals( "tell", StringComparison.OrdinalIgnoreCase ) )
+            return end;
+
+        for ( int words = end + 1 < line.Length && line[end + 1] == '<' ? 1 : 2; words > 0 && end >= 0; words-- )
+            end = line.IndexOf( ' ', end + 1 );
+
+        return end < 0 ? line.Length : end;
+    }
+    // TildeTools ends
+
     private static void DrawChunkItem( TextChunk chunk, ChatType ct, bool ooc, int index, int chunkCount, float spaceWidth, List<ChunkMarker> lMarkers, List<Word>? corrections )
     {
         // Don't attempt to draw null chunks.
@@ -586,8 +608,10 @@ internal sealed class ScratchPadUI : Window
 
         // TildeTools
         // A splitter part's Text is the whole sent line, see CreateCompleteTextChunk
+        // Its leading command keeps the channel's colour, as upstream's header does
         ooc &= !chunk.FromSplitter;
         lMarkers = chunk.FromSplitter ? [] : lMarkers;
+        int commandEnd = chunk.FromSplitter ? CommandEnd( chunk.Text.Trim().Unwrap() ) : 0;
         // TildeTools ends
 
         float width = 0f;
@@ -660,6 +684,11 @@ internal sealed class ScratchPadUI : Window
             if ( corrections?.Count > 0 && word.WordLength > 0 && word.StartIndex >= chunk.BodyStart && word.StartIndex < chunk.BodyEnd
                  && corrections[0].WordIndex == word.WordIndex + chunk.StartIndex )
                 ImGui.TextColored( Wordsmith.Configuration.SpellingErrorHighlightColor, text.Replace( "%", "%%" ) );
+
+            // None has no colour
+            else if ( word.StartIndex < commandEnd
+                      && Wordsmith.Configuration.HeaderColors.TryGetValue( (int)(ct == ChatType.CrossWorldLinkshell ? ChatType.Linkshell : ct), out Vector4 colour ) )
+                ImGui.TextColored( colour, text.Replace( "%", "%%" ) );
             // TildeTools ends
 
             else
