@@ -11,14 +11,12 @@ namespace Wordsmith;
 
 public static class Hosting
 {
-    #region Settings file
-
     private const string ConfigFileName = "Wordsmith.json";
 
     internal static bool IsHosted { get; private set; }
 
-    // Before construction. Dalamud writes settings to whoever asked, and a hosted copy asks
-    // with the host's interface, so saving through Dalamud wipes the host's file
+    // Before construction
+    // Hosted, PluginInterface is the host's, so SavePluginConfig would overwrite the host's file
     public static void HostInOwnFile() => IsHosted = true;
 
     // After construction, which subscribes them to the host's buttons
@@ -43,16 +41,12 @@ public static class Hosting
         return true;
     }
 
-    /// <summary>
-    /// The author's donation link, for a host that gathers its credits in one place.
-    /// Empty until the manifest has been fetched.
-    /// </summary>
+    // Empty until Git.GetManifest succeeds
     public static string KofiUrl => Wordsmith.WebManifest?.Kofi ?? string.Empty;
 
     private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
 
-    private static string PathBeside(FileInfo other) =>
-        Path.Combine(other.DirectoryName ?? throw new InvalidOperationException("Dalamud's configuration folder is unavailable."), ConfigFileName);
+    private static string PathBeside(FileInfo other) => Path.Combine(other.DirectoryName!, ConfigFileName);
 
     // Matches how Dalamud writes settings, so stored objects carry "$type"
     private static readonly JsonSerializerSettings SerializerSettings = new()
@@ -103,14 +97,11 @@ public static class Hosting
             if (!File.Exists(path))
                 return new Configuration();
 
-            if (JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(path), SerializerSettings) is { } loaded)
-                return loaded;
-
-            Wordsmith.PluginLog.Error($"Wordsmith's settings at {path} read as empty; they will not be overwritten.");
+            return JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(path), SerializerSettings) ?? throw new InvalidDataException("It read as empty");
         }
         catch (Exception e)
         {
-            Wordsmith.PluginLog.Error($"Could not read Wordsmith's settings at {path}. Running on defaults; the file will NOT be overwritten.\n{e}");
+            Wordsmith.PluginLog.Error(e, $"Could not read Wordsmith's settings at {path}. Running on defaults, and the file won't be overwritten.");
         }
 
         _loadFailed = true;
@@ -140,7 +131,7 @@ public static class Hosting
         }
         catch (Exception e)
         {
-            Wordsmith.PluginLog.Error($"Could not save Wordsmith's settings.\n{e}");
+            Wordsmith.PluginLog.Error(e, "Could not save Wordsmith's settings.");
             return false;
         }
     }
@@ -158,8 +149,9 @@ public static class Hosting
 
     public enum Rescued { Nothing, Adopted, SetAside }
 
-    // Before HostInOwnFile, a hosted Wordsmith saved defaults over the host's file. Oops. Our own
-    // file always wins, the host's copy is set aside. Runs before Dalamud fills anything in, so it throws
+    // Up to 0.3.4 a hosted Wordsmith saved into the host's file, see TildeTools.Configuration.Load
+    // An existing Wordsmith.json wins, the host's copy goes to Wordsmith.json.hosted
+    // Throws: runs before Wordsmith's PluginLog is injected
     public static Rescued RescueSettingsFrom(FileInfo hostConfigFile, out string? path)
     {
         path = null;
@@ -197,10 +189,6 @@ public static class Hosting
         return Rescued.Adopted;
     }
 
-    #endregion
-
-    #region Splitting and sending
-
     private const int RequiredApiVersion = 2;
 
     private static ICallGateSubscriber<int>? _apiVersion;
@@ -209,10 +197,20 @@ public static class Hosting
     private static ICallGateSubscriber<string, int, List<int>>? _bodySpans;
     private static ICallGateSubscriber<string, int, List<int>>? _bodySources;
     private static ICallGateSubscriber<object?>? _available;
+    private static ICallGateSubscriber<string, bool>? _isWord;
+    private static ICallGateSubscriber<string, int, List<string>>? _suggest;
+    private static ICallGateSubscriber<string, bool>? _addToDictionary;
+    private static ICallGateSubscriber<bool>? _lookup;
+    private static ICallGateSubscriber<object?>? _spellAvailable;
 
     internal static int SplitterGeneration { get; private set; }
 
     private static void SplitterChanged() => SplitterGeneration++;
+
+    // Moves on TildeTools.Spell.Available: a dictionary loaded or switched, a word learned in another box
+    internal static int SpellerGeneration { get; private set; }
+
+    private static void SpellerChanged() => SpellerGeneration++;
 
     // A restart reads a new Configuration, so the settings window goes too
     internal static void Shutdown()
@@ -224,29 +222,26 @@ public static class Hosting
 
     internal static void Initialise()
     {
-        _available = Wordsmith.PluginInterface.GetIpcSubscriber<object?>("TildeTools.Split.Available");
+        var pi = Wordsmith.PluginInterface;
+        _available = pi.GetIpcSubscriber<object?>("TildeTools.Split.Available");
         _available.Subscribe(SplitterChanged);
-        _apiVersion = Wordsmith.PluginInterface.GetIpcSubscriber<int>("TildeTools.Split.ApiVersion");
-        _splitLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Split.SplitLine");
-        _sendLine = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, bool>("TildeTools.Split.SendLine");
-        _bodySpans = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySpans");
-        _bodySources = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySources");
-        _isWord = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.IsWord");
-        _suggest = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Spell.SuggestNow");
-        _addToDictionary = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.AddToDictionary");
-        _lookup = Wordsmith.PluginInterface.GetIpcSubscriber<bool>("TildeTools.Spell.Lookup");
-        _spellAvailable = Wordsmith.PluginInterface.GetIpcSubscriber<object?>("TildeTools.Spell.Available");
+        _apiVersion = pi.GetIpcSubscriber<int>("TildeTools.Split.ApiVersion");
+        _splitLine = pi.GetIpcSubscriber<string, int, List<string>>("TildeTools.Split.SplitLine");
+        _sendLine = pi.GetIpcSubscriber<string, int, bool>("TildeTools.Split.SendLine");
+        _bodySpans = pi.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySpans");
+        _bodySources = pi.GetIpcSubscriber<string, int, List<int>>("TildeTools.Split.SplitLineBodySources");
+        _isWord = pi.GetIpcSubscriber<string, bool>("TildeTools.Spell.IsWord");
+        _suggest = pi.GetIpcSubscriber<string, int, List<string>>("TildeTools.Spell.SuggestNow");
+        _addToDictionary = pi.GetIpcSubscriber<string, bool>("TildeTools.Spell.AddToDictionary");
+        _lookup = pi.GetIpcSubscriber<bool>("TildeTools.Spell.Lookup");
+        _spellAvailable = pi.GetIpcSubscriber<object?>("TildeTools.Spell.Available");
         _spellAvailable.Subscribe(SpellerChanged);
     }
 
     private static bool SplitterAvailable => Ask(_apiVersion, gate => gate.InvokeFunc() >= RequiredApiVersion, false);
 
-    /// <summary>
-    /// The pad's header and body as one chat line, the form a splitter expects.
-    /// </summary>
-    // The OOC box as tags around the body. The splitter moves them onto every part when its tags
-    // match, which they do by default
-    private static string FullLine(Gui.ScratchPadUI pad, out int textAt)
+    // The splitter repeats Wordsmith's OOC tags on every part when they match its own, as they do by default
+    private static string FullLine(ScratchPadUI pad, out int textAt)
     {
         string prefix = pad.Header.ToString() is { Length: > 0 } header ? $"{header} " : "";
         string open = pad.UseOOC ? Wordsmith.Configuration.OocOpeningTag : "";
@@ -259,7 +254,7 @@ public static class Hosting
     // Sources: where each body starts in the line, empty if any can't be found
     // A body word's index plus StartIndex is its index in ScratchString.Unwrap(), where the corrections are
     // BodyEnd = 0 without a source, so nothing in the part matches
-    internal static List<TextChunk>? Split(Gui.ScratchPadUI pad)
+    internal static List<TextChunk>? Split(ScratchPadUI pad)
     {
         string line = FullLine(pad, out int textAt);
         if (!SplitterAvailable || Ask(_splitLine, gate => gate.InvokeFunc(line, 0), []) is not { Count: > 0 } parts)
@@ -272,22 +267,7 @@ public static class Hosting
             : new TextChunk(part) { FromSplitter = true, BodyEnd = 0 })];
     }
 
-    internal static bool Send(Gui.ScratchPadUI pad) => SplitterAvailable && Ask(_sendLine, gate => gate.InvokeFunc(FullLine(pad, out _), 0), false);
-
-    #endregion
-
-    #region Spelling
-
-    private static ICallGateSubscriber<string, bool>? _isWord;
-    private static ICallGateSubscriber<string, int, List<string>>? _suggest;
-    private static ICallGateSubscriber<string, bool>? _addToDictionary;
-    private static ICallGateSubscriber<bool>? _lookup;
-    private static ICallGateSubscriber<object?>? _spellAvailable;
-
-    // Moves on TildeTools.Spell.Available: a dictionary loaded or switched, a word learned in another box
-    internal static int SpellerGeneration { get; private set; }
-
-    private static void SpellerChanged() => SpellerGeneration++;
+    internal static bool Send(ScratchPadUI pad) => SplitterAvailable && Ask(_sendLine, gate => gate.InvokeFunc(FullLine(pad, out _), 0), false);
 
     // Lang.IsWord's lowercase goes unused, Speller.IsWord tries as typed then lowercase
     internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
@@ -299,8 +279,6 @@ public static class Hosting
 
     // TildeTools' Define window, not Merriam-Webster's API
     internal static bool ShowLookup() => IsHosted && Ask(_lookup, gate => gate.InvokeFunc(), false);
-
-    #endregion
 
     // HasFunction first: with the module off, IsWord would throw once per word the pad checks
     private static TOut Ask<TGate, TOut>(TGate? gate, Func<TGate, TOut> call, TOut failed)
