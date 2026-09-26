@@ -1265,9 +1265,9 @@ internal sealed class ScratchPadUI : Window
             // TildeTools
             if ( Hosting.Send( this ) )
             {
+                // The pad's text: the splitter's parts carry the channel, the tell target and markers too
                 if ( Wordsmith.Configuration.TrackWordStatistics )
-                    foreach ( TextChunk chunk in this._chunks )
-                        this._statisticsTracker.AddChunk( chunk );
+                    this._statisticsTracker.AddChunk( new TextChunk( this.ScratchString.Unwrap() ) );
 
                 this._nextChunk = 0;
 
