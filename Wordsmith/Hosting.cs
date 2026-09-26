@@ -1,5 +1,6 @@
 // TildeTools: written for this fork, not part of upstream Wordsmith.
 
+using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Ipc;
 using Wordsmith.Gui;
@@ -13,9 +14,13 @@ public static class Hosting
 
     internal static bool IsHosted => _load != null;
 
+    // A header's colour from the game's own Log Text Colors, null for none
+    internal static Func<string, Vector4?>? HeaderColour { get; private set; }
+
     // Before construction
     // Hosted, PluginInterface is the host's, so the host keeps these settings in a file of their own
-    public static void HostInOwnFile(Func<Configuration> load, Func<Configuration, bool> save) => (_load, _save) = (load, save);
+    public static void HostInOwnFile(Func<Configuration> load, Func<Configuration, bool> save, Func<string, Vector4?> headerColour) =>
+        (_load, _save, HeaderColour) = (load, save, headerColour);
 
     // After construction, which subscribes them to the host's buttons
     public static void ReleaseInstallerButtons()

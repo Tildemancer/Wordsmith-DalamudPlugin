@@ -573,12 +573,12 @@ internal sealed class ScratchPadUI : Window
         }
     }
 
-    /// <summary>
-    /// Draws an individual chunk to the window.
-    /// </summary>
-    /// <param name="chunk">Chunk to be drawn.</param>
-    /// <param name="ct">Chat type to display with the chunk.</param>
     // TildeTools
+    // Hosted, the game's own Log Text Colors, else Wordsmith's; None has neither
+    private static Vector4? HeaderColour( string header, ChatType ct ) =>
+        Hosting.HeaderColour?.Invoke( header )
+        ?? (Wordsmith.Configuration.HeaderColors.TryGetValue( (int)(ct == ChatType.CrossWorldLinkshell ? ChatType.Linkshell : ct), out Vector4 colour ) ? colour : null);
+
     // A tell's target runs on: <t>, or First Last with any @World
     private static int CommandEnd( string line )
     {
@@ -600,6 +600,11 @@ internal sealed class ScratchPadUI : Window
     }
     // TildeTools ends
 
+    /// <summary>
+    /// Draws an individual chunk to the window.
+    /// </summary>
+    /// <param name="chunk">Chunk to be drawn.</param>
+    /// <param name="ct">Chat type to display with the chunk.</param>
     private static void DrawChunkItem( TextChunk chunk, ChatType ct, bool ooc, int index, int chunkCount, float spaceWidth, List<ChunkMarker> lMarkers, List<Word>? corrections )
     {
         // Don't attempt to draw null chunks.
@@ -612,6 +617,7 @@ internal sealed class ScratchPadUI : Window
         ooc &= !chunk.FromSplitter;
         lMarkers = chunk.FromSplitter ? [] : lMarkers;
         int commandEnd = chunk.FromSplitter ? CommandEnd( chunk.Text.Trim().Unwrap() ) : 0;
+        Vector4? commandColour = commandEnd > 0 ? HeaderColour( chunk.Text.Trim().Unwrap()[..commandEnd], ct ) : null;
         // TildeTools ends
 
         float width = 0f;
@@ -623,7 +629,9 @@ internal sealed class ScratchPadUI : Window
             if ( ct == ChatType.CrossWorldLinkshell )
                 ct = ChatType.Linkshell;
 
-            ImGui.TextColored( Wordsmith.Configuration.HeaderColors[(int)ct], chunk.Header.Replace( "%", "%%" ) );
+            // TildeTools
+            ImGui.TextColored( HeaderColour( chunk.Header, ct ) ?? Vector4.One, chunk.Header.Replace( "%", "%%" ) );
+            // TildeTools ends
             width += ImGui.CalcTextSize( chunk.Header ).X;
             sameLine = true;
         }
@@ -685,9 +693,7 @@ internal sealed class ScratchPadUI : Window
                  && corrections[0].WordIndex == word.WordIndex + chunk.StartIndex )
                 ImGui.TextColored( Wordsmith.Configuration.SpellingErrorHighlightColor, text.Replace( "%", "%%" ) );
 
-            // None has no colour
-            else if ( word.StartIndex < commandEnd
-                      && Wordsmith.Configuration.HeaderColors.TryGetValue( (int)(ct == ChatType.CrossWorldLinkshell ? ChatType.Linkshell : ct), out Vector4 colour ) )
+            else if ( word.StartIndex < commandEnd && commandColour is { } colour )
                 ImGui.TextColored( colour, text.Replace( "%", "%%" ) );
             // TildeTools ends
 
