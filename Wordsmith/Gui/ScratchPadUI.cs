@@ -83,6 +83,7 @@ internal sealed class ScratchPadUI : Window
     private bool _invalidateChunks = false;
     // TildeTools
     private int _splitterSeen;
+    private int _spellerSeen;
     // TildeTools ends
 
     /// <summary>
@@ -266,6 +267,10 @@ internal sealed class ScratchPadUI : Window
         // Moves on TildeTools.Split.Available: the splitter's settings, the chat box's channel or the /r target
         this._invalidateChunks |= this._splitterSeen != Hosting.SplitterGeneration;
         this._splitterSeen = Hosting.SplitterGeneration;
+
+        // And on TildeTools.Spell.Available, so a word learned elsewhere loses its mark here
+        this._do_spell_check |= this._spellerSeen != Hosting.SpellerGeneration;
+        this._spellerSeen = Hosting.SpellerGeneration;
         // TildeTools ends
 
         // If the text chunks have been invalidated then update them

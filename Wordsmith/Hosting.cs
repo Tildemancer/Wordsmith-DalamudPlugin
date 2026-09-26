@@ -218,6 +218,7 @@ public static class Hosting
     internal static void Shutdown()
     {
         _available?.Unsubscribe(SplitterChanged);
+        _spellAvailable?.Unsubscribe(SpellerChanged);
         _settings = null;
     }
 
@@ -234,6 +235,8 @@ public static class Hosting
         _suggest = Wordsmith.PluginInterface.GetIpcSubscriber<string, int, List<string>>("TildeTools.Spell.SuggestNow");
         _addToDictionary = Wordsmith.PluginInterface.GetIpcSubscriber<string, bool>("TildeTools.Spell.AddToDictionary");
         _lookup = Wordsmith.PluginInterface.GetIpcSubscriber<bool>("TildeTools.Spell.Lookup");
+        _spellAvailable = Wordsmith.PluginInterface.GetIpcSubscriber<object?>("TildeTools.Spell.Available");
+        _spellAvailable.Subscribe(SpellerChanged);
     }
 
     private static bool SplitterAvailable => Ask(_apiVersion, gate => gate.InvokeFunc() >= RequiredApiVersion, false);
@@ -279,6 +282,12 @@ public static class Hosting
     private static ICallGateSubscriber<string, int, List<string>>? _suggest;
     private static ICallGateSubscriber<string, bool>? _addToDictionary;
     private static ICallGateSubscriber<bool>? _lookup;
+    private static ICallGateSubscriber<object?>? _spellAvailable;
+
+    // Moves on TildeTools.Spell.Available: a dictionary loaded or switched, a word learned in another box
+    internal static int SpellerGeneration { get; private set; }
+
+    private static void SpellerChanged() => SpellerGeneration++;
 
     // Lang.IsWord's lowercase goes unused, Speller.IsWord tries as typed then lowercase
     internal static bool IsWord(string word) => Ask(_isWord, gate => gate.InvokeFunc(word), true);
