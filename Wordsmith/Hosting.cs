@@ -1,23 +1,21 @@
 // TildeTools: written for this fork, not part of upstream Wordsmith.
 
-using System.Reflection;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Ipc;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Wordsmith.Gui;
 
 namespace Wordsmith;
 
 public static class Hosting
 {
-    private const string ConfigFileName = "Wordsmith.json";
+    private static Func<Configuration>? _load;
+    private static Func<Configuration, bool>? _save;
 
-    internal static bool IsHosted { get; private set; }
+    internal static bool IsHosted => _load != null;
 
     // Before construction
-    // Hosted, PluginInterface is the host's, so SavePluginConfig would overwrite the host's file
-    public static void HostInOwnFile() => IsHosted = true;
+    // Hosted, PluginInterface is the host's, so the host keeps these settings in a file of their own
+    public static void HostInOwnFile(Func<Configuration> load, Func<Configuration, bool> save) => (_load, _save) = (load, save);
 
     // After construction, which subscribes them to the host's buttons
     public static void ReleaseInstallerButtons()
@@ -44,149 +42,16 @@ public static class Hosting
     // Empty until Git.GetManifest succeeds
     public static string KofiUrl => Wordsmith.WebManifest?.Kofi ?? string.Empty;
 
-    private static string ConfigPath => PathBeside(Wordsmith.PluginInterface.ConfigFile);
-
-    private static string PathBeside(FileInfo other) => Path.Combine(other.DirectoryName!, ConfigFileName);
-
-    // Matches how Dalamud writes settings, so stored objects carry "$type"
-    private static readonly JsonSerializerSettings SerializerSettings = new()
-    {
-        TypeNameHandling = TypeNameHandling.Objects,
-        TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-        SerializationBinder = new LocalAssemblyBinder(),
-    };
-
-    // Resolves against the running Wordsmith, or the serializer loads a second copy of the assembly
-    private sealed class LocalAssemblyBinder : DefaultSerializationBinder
-    {
-        private static readonly Assembly Ours = typeof(Configuration).Assembly;
-        private static readonly string OurName = Ours.GetName().Name!;
-
-        public override Type BindToType(string? assemblyName, string typeName)
-        {
-            // Whole name, not ours first: a runtime generic can take our types as arguments
-            string qualified = assemblyName == null ? typeName : $"{typeName}, {assemblyName}";
-            return Type.GetType(qualified, ResolveAssembly, ResolveType, throwOnError: false) ?? base.BindToType(assemblyName, typeName);
-        }
-
-        private static Assembly? ResolveAssembly(AssemblyName name) =>
-            string.Equals(name.Name, OurName, StringComparison.Ordinal)
-                ? Ours
-                : Assembly.Load(name);
-
-        private static Type? ResolveType(Assembly? assembly, string name, bool ignoreCase) =>
-            assembly == null
-                ? Type.GetType(name, throwOnError: false, ignoreCase)
-                : assembly.GetType(name, throwOnError: false, ignoreCase);
-    }
-
-    // Settings existed but couldn't be read, so saving is refused and defaults never overwrite them
-    private static bool _loadFailed;
-
-    // Hosted, Dalamud would hand back the host's settings object
-    internal static Configuration LoadConfig()
-    {
-        if (!IsHosted)
-            return Wordsmith.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-
-        _loadFailed = false;
-        string path = ConfigPath;
-
-        try
-        {
-            if (!File.Exists(path))
-                return new Configuration();
-
-            return JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(path), SerializerSettings) ?? throw new InvalidDataException("It read as empty");
-        }
-        catch (Exception e)
-        {
-            Wordsmith.PluginLog.Error(e, $"Could not read Wordsmith's settings at {path}. Running on defaults, and the file won't be overwritten.");
-        }
-
-        _loadFailed = true;
-        Wordsmith.NotificationManager.AddNotification(new() { Title = "Wordsmith", Content = $"Couldn't read its settings, so none are saved until {path} is fixed or removed.", Type = Dalamud.Interface.ImGuiNotification.NotificationType.Warning });
-        return new Configuration();
-    }
+    internal static Configuration LoadConfig() => _load?.Invoke() ?? Wordsmith.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
     // False when refused or failed, so the save isn't reported done
     internal static bool SaveConfig(Configuration config)
     {
-        if (!IsHosted)
-        {
-            Wordsmith.PluginInterface.SavePluginConfig(config);
-            return true;
-        }
+        if (_save != null)
+            return _save(config);
 
-        if (_loadFailed)
-        {
-            Wordsmith.PluginLog.Warning("Refusing to save Wordsmith's settings: the existing ones could not be read, and writing now would replace them with defaults.");
-            return false;
-        }
-
-        try
-        {
-            Write(ConfigPath, config);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Wordsmith.PluginLog.Error(e, "Could not save Wordsmith's settings.");
-            return false;
-        }
-    }
-
-    private static void Write(string path, Configuration config)
-    {
-        string temporary = path + ".tmp";
-        File.WriteAllText(temporary, JsonConvert.SerializeObject(config, Formatting.Indented, SerializerSettings));
-
-        if (File.Exists(path))
-            File.Replace(temporary, path, path + ".bak", ignoreMetadataErrors: true);
-        else
-            File.Move(temporary, path);
-    }
-
-    public enum Rescued { Nothing, Adopted, SetAside }
-
-    // Up to 0.3.4 a hosted Wordsmith saved into the host's file, see TildeTools.Configuration.Load
-    // An existing Wordsmith.json wins, the host's copy goes to Wordsmith.json.hosted
-    // Throws: runs before Wordsmith's PluginLog is injected
-    public static Rescued RescueSettingsFrom(FileInfo hostConfigFile, out string? path)
-    {
-        path = null;
-
-        hostConfigFile.Refresh();
-        if (!hostConfigFile.Exists)
-            return Rescued.Nothing;
-
-        string text = File.ReadAllText(hostConfigFile.FullName);
-
-        // By text, not by deserialising: the host may not be able to resolve our type
-        if (!text.Contains(typeof(Configuration).FullName + ", ", StringComparison.Ordinal))
-            return Rescued.Nothing;
-
-        string mine = PathBeside(hostConfigFile);
-
-        if (File.Exists(mine))
-        {
-            // Kept whole and written once, so an affected version going back can't replace it with defaults
-            string aside = mine + ".hosted";
-            if (!File.Exists(aside))
-                File.Copy(hostConfigFile.FullName, aside);
-
-            path = aside;
-            return Rescued.SetAside;
-        }
-
-        Configuration? stranded = JsonConvert.DeserializeObject<Configuration>(text, SerializerSettings);
-        if (stranded == null)
-            return Rescued.Nothing;
-
-        Write(mine, stranded);
-
-        path = mine;
-        return Rescued.Adopted;
+        Wordsmith.PluginInterface.SavePluginConfig(config);
+        return true;
     }
 
     private const int RequiredApiVersion = 2;
