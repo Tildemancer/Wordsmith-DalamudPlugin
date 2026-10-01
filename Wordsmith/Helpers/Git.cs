@@ -15,8 +15,11 @@ internal sealed class Git
         using ( HttpClient client = new() )
         {
             int tries = 3;
-            // Force refresh
-            client.DefaultRequestHeaders.IfModifiedSince = DateTimeOffset.UtcNow;
+            // TildeTools
+            // Upstream set If-Modified-Since to now, which gets a 304 that throws and fails the first try!
+            // No-Cache forces the refresh.
+            client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
+            // TildeTools ends
             while ( tries-- > 0 )
             {
                 string raw = "";

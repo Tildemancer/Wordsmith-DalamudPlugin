@@ -247,7 +247,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <param name="notify"><see cref="bool"/> indicating if the user should be notified that settings were saved.</param>
     internal void Save(bool notify = true)
     {
-        Wordsmith.PluginInterface.SavePluginConfig(this);
+        // TildeTools
+        notify &= Hosting.SaveConfig(this);
+        // TildeTools ends
         if( notify )
         {
             _ = Wordsmith.NotificationManager.AddNotification( new()

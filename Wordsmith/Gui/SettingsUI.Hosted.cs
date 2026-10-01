@@ -1,0 +1,55 @@
+// TildeTools: written for this fork, not part of upstream Wordsmith.
+
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
+
+namespace Wordsmith.Gui;
+
+internal sealed partial class SettingsUI
+{
+    // Hosted, Lang loads no dictionary, so upstream's list and added words would do nothing.
+    // Its own tab, since returning inside upstream's needs EndChild and EndTabItem by hand.
+    // The other settings still apply, cleaning string too, since WS's checker asks TT.
+    private void DrawHostedSpellCheckTab()
+    {
+        using var tab = ImRaii.TabItem("Spell Check##SettingsUITabItem");
+        if (!tab.Success)
+            return;
+
+        using var child = ImRaii.Child("DictionarySettingsChild", new(-1, GetCanvasSize()));
+        if (!child.Success)
+            return;
+
+        // TildeTools: copied from WS's SettingsUI.cs, because these settings still apply when hosted
+        _ = ImGui.Checkbox("Auto-Spell Check", ref this._autospellcheck);
+        ImGuiExt.SetHoveredTooltip("When enabled, spell check will automatically run after a pause in typing is detected.");
+        ImGui.SameLine();
+
+        _ = ImGui.Checkbox("Ignore Hyphen-Terminated Words##SettingsUICheckbox", ref this._ignoreHypen);
+        ImGuiExt.SetHoveredTooltip("This is useful in roleplay for emulating cut speech.\ni.e. \"How dare yo-,\" she was cut off by the rude man.");
+        ImGui.SameLine();
+
+        _ = ImGui.Checkbox("Fix Spacing.", ref this._fixDoubleSpace);
+        ImGuiExt.SetHoveredTooltip("When enabled, Scratch Pads will programmatically remove extra\nspaces from your text for you.");
+        ImGui.Separator();
+
+        var advanced = Wordsmith.Configuration.ShowAdvancedSettings;
+        if (advanced)
+        {
+            ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X / 2.0f - 160 * ImGuiHelpers.GlobalScale);
+            _ = ImGui.DragFloat("Auto-Spellcheck Delay (Seconds)", ref this._autospellcheckdelay, 0.1f, 0.1f, 100f);
+            ImGuiExt.SetHoveredTooltip("The time in seconds to wait after typing stops to spell check.");
+            ImGui.Separator();
+        }
+
+        ImGui.TextWrapped("The dictionaries, the words you've added and how many corrections to offer are on TildeTools' Spelling tab.");
+
+        if (!advanced)
+            return;
+
+        ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X - this._style.WindowPadding.X - ImGui.CalcTextSize("Cleaning String").X);
+        _ = ImGui.InputText("Cleaning String", ref this._punctuationCleaningString, 1024);
+        ImGuiExt.SetHoveredTooltip("This is the complete list of punctuation to be cleaned from the start/end of the word when checking for spelling errors.\nWARNING: Altering this can cause undesired behavior.");
+    }
+}

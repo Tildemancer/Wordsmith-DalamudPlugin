@@ -29,7 +29,9 @@ public static partial class Lang
     /// <param name="key">String to search for.</param>
     /// <param name="lowercase">If <see langword="true"/> then the string is made lowercase.</param>
     /// <returns><see langword="true""/> if the word is in the dictionary</returns>
-    public static bool IsWord(string key, bool lowercase) => _dictionary.Contains(lowercase ? key.ToLower() : key);
+    // TildeTools
+    public static bool IsWord(string key, bool lowercase) => Hosting.IsHosted ? Hosting.IsWord(key) : _dictionary.Contains(lowercase ? key.ToLower() : key);
+    // TildeTools ends
 
     private static void ValidateAndAddWord(string candidate)
     {
@@ -59,6 +61,15 @@ public static partial class Lang
 
     private static void Init(bool notify)
     {
+        // TildeTools
+        // Hosted, TT's Spelling has the dictionaries, so load none.
+        if ( Hosting.IsHosted )
+        {
+            Enabled = true;
+            return;
+        }
+        // TildeTools ends
+
         ValidateConfiguration();
         _dictionary.Clear();
 
@@ -207,6 +218,11 @@ public static partial class Lang
     /// <returns><see langword="true"/> if the word was not in the dictionary already.</returns>
     public static bool AddDictionaryEntry(string word)
     {
+        // TildeTools
+        if ( Hosting.IsHosted )
+            return Hosting.AddToDictionary( word );
+        // TildeTools ends
+
         // Add the word to the currently loaded dictionary.
         if (_dictionary.Add(word.Trim().ToLower()))
         {
@@ -237,6 +253,11 @@ public static partial class Lang
     {
         if ( word.Length == 0 )
             throw new Exception( $"GetSuggestions({word}) failed. Word must have length." );
+
+        // TildeTools
+        if ( Hosting.IsHosted )
+            return Hosting.Suggest( word );
+        // TildeTools ends
 
         // Check if the first character is capitalized.
         bool isCapped = WordRegex().IsMatch( word ); //"ABCDEFGHIJKLMNOPQRSTUVWXYZ".Contains(word[0]);

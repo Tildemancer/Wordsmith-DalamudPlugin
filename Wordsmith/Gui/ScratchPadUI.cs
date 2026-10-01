@@ -1,6 +1,9 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Interface.Utility;
+// TildeTools
+using Dalamud.Interface.Utility.Raii;
+// TildeTools ends
 using Dalamud.Bindings.ImGui;
 using Wordsmith.Enums;
 using Wordsmith.Helpers;
@@ -78,6 +81,10 @@ internal sealed class ScratchPadUI : Window
     private bool _textchanged = false;
     private bool _ignoreTextEdit = false;
     private bool _invalidateChunks = false;
+    // TildeTools
+    private int _splitterSeen;
+    private int _spellerSeen;
+    // TildeTools ends
 
     /// <summary>
     /// The text used by the replacement inputtext.
@@ -255,6 +262,15 @@ internal sealed class ScratchPadUI : Window
             DoSpellCheck();
             this._do_spell_check = false;
         }
+
+        // TildeTools
+        // Re-splits when TT says the splitter changed (settings, channel, /r target)
+        this._invalidateChunks |= this._splitterSeen != Hosting.SplitterGeneration;
+        this._splitterSeen = Hosting.SplitterGeneration;
+
+        this._do_spell_check |= (Wordsmith.Configuration.AutoSpellCheck || this._corrections.Count > 0) && this._spellerSeen != Hosting.SpellerGeneration;
+        this._spellerSeen = Hosting.SpellerGeneration;
+        // TildeTools ends
 
         // If the text chunks have been invalidated then update them
         if ( this._invalidateChunks )
@@ -556,6 +572,14 @@ internal sealed class ScratchPadUI : Window
         }
     }
 
+    // TildeTools
+    private static Vector4? HeaderColour( string header, ChatType ct ) =>
+        Hosting.HeaderColour?.Invoke( header )
+        ?? (Wordsmith.Configuration.HeaderColors.TryGetValue( (int)(ct == ChatType.CrossWorldLinkshell ? ChatType.Linkshell : ct), out Vector4 colour ) ? colour : null);
+
+    private static readonly List<ChunkMarker> NoMarkers = [];
+    // TildeTools ends
+
     /// <summary>
     /// Draws an individual chunk to the window.
     /// </summary>
@@ -567,6 +591,15 @@ internal sealed class ScratchPadUI : Window
         if ( chunk is null )
             return;
 
+        // TildeTools
+        // A splitter part is already the whole sent line, so no OOC tags or markers.
+        // See CreateCompleteTextChunk
+        // Its command should get the channel's color, like upstream's header.
+        ooc &= !chunk.FromSplitter;
+        lMarkers = chunk.FromSplitter ? NoMarkers : lMarkers;
+        Vector4? commandColour = chunk.Command.Length > 0 ? HeaderColour( chunk.Command, ct ) : null;
+        // TildeTools ends
+
         float width = 0f;
         bool sameLine = false;
 
@@ -576,7 +609,9 @@ internal sealed class ScratchPadUI : Window
             if ( ct == ChatType.CrossWorldLinkshell )
                 ct = ChatType.Linkshell;
 
-            ImGui.TextColored( Wordsmith.Configuration.HeaderColors[(int)ct], chunk.Header.Replace( "%", "%%" ) );
+            // TildeTools
+            ImGui.TextColored( HeaderColour( chunk.Header, ct ) ?? Vector4.One, chunk.Header.Replace( "%", "%%" ) );
+            // TildeTools ends
             width += ImGui.CalcTextSize( chunk.Header ).X;
             sameLine = true;
         }
@@ -631,8 +666,16 @@ internal sealed class ScratchPadUI : Window
             else
                 width = objWidth;
 
-            if ( corrections?.Count > 0 && corrections[0].StartIndex == word.StartIndex + chunk.StartIndex )
+            // TildeTools
+            // Only BodyStart..BodyEnd is the pad's text, so ONLY those words can match a correction.
+            // WordIndex skips leading punctuation, and the splitter can lift an OOC tag off the first word.
+            if ( corrections?.Count > 0 && word.WordLength > 0 && word.StartIndex >= chunk.BodyStart && word.StartIndex < chunk.BodyEnd
+                 && corrections[0].WordIndex == word.WordIndex + chunk.StartIndex )
                 ImGui.TextColored( Wordsmith.Configuration.SpellingErrorHighlightColor, text.Replace( "%", "%%" ) );
+
+            else if ( word.StartIndex < chunk.Command.Length && commandColour is { } colour )
+                ImGui.TextColored( colour, text.Replace( "%", "%%" ) );
+            // TildeTools ends
 
             else
                 ImGui.Text( text.Replace( "%", "%%" ) );
@@ -666,8 +709,10 @@ internal sealed class ScratchPadUI : Window
         DrawMarkers( [.. lMarkers.Where( x => x.Position == MarkerPosition.AfterOOC )] );
 
         // If we are to draw the continuation marker then use the same DrawMarkers system 
-        if ( chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
+        // TildeTools
+        if ( !chunk.FromSplitter && chunkCount > 1 && (index + 1 < chunkCount || Wordsmith.Configuration.ContinuationMarkerOnLast) )
             DrawMarkers( [new( Wordsmith.Configuration.ContinuationMarker, 0, 0, 0 )] );
+        // TildeTools ends
 
         // Draw the after continuation markers
         DrawMarkers( [.. lMarkers.Where( x => x.Position == MarkerPosition.AfterContinuationMarker )] );
@@ -870,40 +915,39 @@ internal sealed class ScratchPadUI : Window
     private void DrawCopyButton( float width )
     {
         // If there is more than 1 chunk.
-        if ( this._chunks.Count > 1 )
+        // TildeTools
+        if ( this._chunks.Count > 1 && !this._chunks[0].FromSplitter )
         {
-            // Push the icon font for the character we need then draw the previous chunk button.
-            ImGui.PushFont( UiBuilder.IconFont );
-            if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
-            {
-                --this._nextChunk;
-                if ( this._nextChunk < 0 )
-                    this._nextChunk = this._chunks.Count - 1;
-            }
-            // Reset the font.
-            ImGui.PushFont( UiBuilder.DefaultFont );
+            // WS reset the font by pushing DefaultFont instead of popping, which tripped ImGui's assertion, so...
+            using ( ImRaii.PushFont( UiBuilder.IconFont ) )
+                if ( ImGui.Button( $"{(char)0xF100}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
+                {
+                    --this._nextChunk;
+                    if ( this._nextChunk < 0 )
+                        this._nextChunk = this._chunks.Count - 1;
+                }
 
             // Draw the copy button with no spacing.
             ImGui.SameLine( 0, 0 );
-            if ( ImGui.Button( $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}", new( width - Wordsmith.BUTTON_Y.Scale() * 2, Wordsmith.BUTTON_Y.Scale() ) ) )
+            if ( ImGui.Button( ButtonLabel(), new( width - Wordsmith.BUTTON_Y.Scale() * 2, Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoCopyToClipboard();
 
-            // Push the font and draw the next chunk button with no spacing.
-            ImGui.PushFont( UiBuilder.IconFont );
             ImGui.SameLine( 0, 0 );
-            if ( ImGui.Button( $"{(char)0xF101}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
-            {
-                ++this._nextChunk;
-                if ( this._nextChunk >= this._chunks.Count )
-                    this._nextChunk = 0;
-            }
-            // Reset the font.
-            ImGui.PushFont( UiBuilder.DefaultFont );
+            using ( ImRaii.PushFont( UiBuilder.IconFont ) )
+                if ( ImGui.Button( $"{(char)0xF101}##{this.ID}ChunkBackButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) ) )
+                {
+                    ++this._nextChunk;
+                    if ( this._nextChunk >= this._chunks.Count )
+                        this._nextChunk = 0;
+                }
+            // TildeTools ends
         }
         else // If there is only one chunk simply draw a normal button.
         {
-            if ( ImGui.Button( $"Copy{(this._chunks.Count > 1 ? $" ({this._nextChunk + 1}/{this._chunks.Count})" : "")}##ScratchPad{this.ID}", new( width, Wordsmith.BUTTON_Y.Scale() ) ) )
+            // TildeTools
+            if ( ImGui.Button( ButtonLabel(), new( width, Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoCopyToClipboard();
+            // TildeTools ends
         }
     }
 
@@ -918,14 +962,12 @@ internal sealed class ScratchPadUI : Window
             if ( ImGui.Button( $"Clear##ScratchPad{this.ID}", new( width - Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
                 DoClearText();
 
-            // Push the font and draw the next chunk button with no spacing.
-            ImGui.PushFont( UiBuilder.IconFont );
+            // TildeTools
             ImGui.SameLine( 0, 0 );
-            if ( ImGui.Button( $"{(char)0xF0E2}##{this.ID}UndoClearButton", new( Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
-                UndoClearText();
-
-            // Reset the font.
-            ImGui.PushFont( UiBuilder.DefaultFont );
+            using ( ImRaii.PushFont( UiBuilder.IconFont ) )
+                if ( ImGui.Button( $"{(char)0xF0E2}##{this.ID}UndoClearButton", new( Wordsmith.BUTTON_Y.Scale(), Wordsmith.BUTTON_Y.Scale() ) ) )
+                    UndoClearText();
+            // TildeTools ends
         }
         else // If there is only one chunk simply draw a normal button.
         {
@@ -1003,12 +1045,16 @@ internal sealed class ScratchPadUI : Window
                     if ( i > 0 )
                         ImGui.Spacing();
 
+                    // TildeTools
+                    // The history item's own count and OOC.
+                    // Upstream used the open pad's this._chunks.Count and this.UseOOC.
                     List<ChunkMarker> markers = [];
                     foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
                     {
-                        if( cm.AppliesTo( i, this._chunks.Count ) && cm.Visible( this.UseOOC, this._chunks.Count ) )
+                        if( cm.AppliesTo( i, tlist.Count ) && cm.Visible( pad.UseOOC, tlist.Count ) )
                             markers.Add( cm );
                     }
+                    // TildeTools ends
 
                     DrawChunkItem( tlist[i], pad.Header!.ChatType, pad.UseOOC, i, tlist.Count, fSpaceWidth, markers, null );
                 }
@@ -1234,6 +1280,26 @@ internal sealed class ScratchPadUI : Window
             // If there are no chunks to copy exit the function.
             if ( this._chunks.Count == 0 )
                 return;
+
+            // TildeTools
+            if ( Hosting.Send( this ) )
+            {
+                // Counts the pad's text, not the parts, which also carry the channel, target and markers.
+                if ( Wordsmith.Configuration.TrackWordStatistics )
+                    this._statisticsTracker.AddChunk( new TextChunk( this.ScratchString.Unwrap() ) );
+
+                this._nextChunk = 0;
+
+                if ( Wordsmith.Configuration.AutomaticallyClearAfterLastCopy )
+                    DoClearText();
+
+                return;
+            }
+
+            // The splitter refused and should have already said why, so nothing's copied.
+            if ( this._chunks[0].FromSplitter )
+                return;
+            // TildeTools ends
 
             // Copy the next chunk over.
             ImGui.SetClipboardText( CreateCompleteTextChunk( this._chunks[this._nextChunk], this.UseOOC, this._nextChunk, this._chunks.Count ) );
@@ -1647,6 +1713,11 @@ internal sealed class ScratchPadUI : Window
     /// <returns>A <see cref="string"/> with all relevant data.</returns>
     private static string CreateCompleteTextChunk( TextChunk chunk, bool OOC, int index, int count )
     {
+        // TildeTools
+        if ( chunk.FromSplitter )
+            return chunk.Text;
+        // TildeTools ends
+
         // Build a string with:
         string result = chunk.Header.Length > 0 ? $"{chunk.Header} " : "";
 
@@ -1721,7 +1792,24 @@ internal sealed class ScratchPadUI : Window
     /// <summary>
     /// Runs FFXIVify on this pad.
     /// </summary>
-    internal void FFXIVify() => this._chunks = ChatHelper.FFXIVify( this.Header, this.ScratchString.Unwrap(), this.UseOOC ) ?? [];
+    // TildeTools
+    internal void FFXIVify() => this._chunks = Hosting.Split( this ) ?? ChatHelper.FFXIVify( this.Header, this.ScratchString.Unwrap(), this.UseOOC ) ?? [];
+
+    // Post for the splitter's own parts, Copy otherwise, so it's keyed on FromSplitter.
+    private (int Count, int Next, bool Post) _labelFor = (-1, -1, false);
+    private string _label = "";
+
+    private string ButtonLabel()
+    {
+        var key = (this._chunks.Count, Next: this._nextChunk, Post: this._chunks.Count > 0 && this._chunks[0].FromSplitter);
+        if ( key != this._labelFor )
+            (this._labelFor, this._label) = (key, key.Post
+                ? $"Post{(key.Count > 1 ? $" ({key.Count} parts)" : "")}##ScratchPad{this.ID}"
+                : $"Copy{(key.Count > 1 ? $" ({key.Next + 1}/{key.Count})" : "")}##ScratchPad{this.ID}");
+
+        return this._label;
+    }
+    // TildeTools ends
 
     /// <summary>
     /// Returns the default height of the text input.

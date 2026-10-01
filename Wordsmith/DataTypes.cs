@@ -517,6 +517,15 @@ internal sealed class TextChunk
     /// </summary>
     internal int StartIndex { get; set; } = -1;
 
+    // TildeTools
+    internal bool FromSplitter { get; init; }
+
+    // The command a splitter part starts with, like /p or /tell Name@World.
+    internal string Command { get; init; } = "";
+    internal int BodyStart { get; init; }
+    internal int BodyEnd { get; init; } = int.MaxValue;
+    // TildeTools ends
+
     /// <summary>
     /// Default constructor.
     /// </summary>

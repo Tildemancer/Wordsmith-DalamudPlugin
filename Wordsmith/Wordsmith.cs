@@ -121,7 +121,10 @@ public sealed class Wordsmith : IDalamudPlugin
     public Wordsmith()
     {
         // Get the configuration.
-        Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        // TildeTools
+        Configuration = Hosting.LoadConfig();
+        Hosting.Initialise();
+        // TildeTools ends
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
 
@@ -137,7 +140,14 @@ public sealed class Wordsmith : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi += WordsmithUI.ShowScratchPad;
 
 
-        WebManifest = Git.GetManifest();
+        // TildeTools
+        // Hosted, fetched in the background, since GetManifest's 3 blocking tries... froze the game! Delightful.
+        // Standalone, Lang.Init needs it right away.
+        // Hosted, it returns early.
+        WebManifest = Hosting.IsHosted ? new() : Git.GetManifest();
+        if ( Hosting.IsHosted )
+            _ = System.Threading.Tasks.Task.Run( () => WebManifest = Git.GetManifest() );
+        // TildeTools ends
 
         // Register handlers for draw and openconfig events.
         PluginInterface.UiBuilder.Draw += WordsmithUI.Draw;
@@ -164,6 +174,9 @@ public sealed class Wordsmith : IDalamudPlugin
 
         // Dispose of the UI
         WordsmithUI.Dispose();
+        // TildeTools
+        Hosting.Shutdown();
+        // TildeTools ends
     }
 
     internal static void ResetConfig()

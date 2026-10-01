@@ -311,12 +311,16 @@ internal static class WordsmithUI
     /// <summary>
     /// Creates or shows the SettingsUI <see cref="Window"/>
     /// </summary>
-    internal static void ShowSettings() { if ( !ShowWindow( typeof( SettingsUI ) ) ) AddWindow( new SettingsUI() { IsOpen = true } ); }
+    // TildeTools
+    internal static void ShowSettings() { if ( !Hosting.ShowSettings() && !ShowWindow( typeof( SettingsUI ) ) ) AddWindow( new SettingsUI() { IsOpen = true } ); }
+    // TildeTools ends
 
     /// <summary>
     /// Shows and/or creates ThesaurusUI.
     /// </summary>
-    internal static void ShowThesaurus() { if ( !ShowWindow( typeof( ThesaurusUI ) ) ) AddWindow( new ThesaurusUI() { IsOpen = true } ); }
+    // TildeTools
+    internal static void ShowThesaurus() { if ( !Hosting.ShowLookup() && !ShowWindow( typeof( ThesaurusUI ) ) ) AddWindow( new ThesaurusUI() { IsOpen = true } ); }
+    // TildeTools ends
 
     /// <summary>
     /// Shows a <see cref="Window"/> if it exists.

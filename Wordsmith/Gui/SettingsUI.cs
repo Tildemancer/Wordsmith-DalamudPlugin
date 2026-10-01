@@ -15,7 +15,10 @@ internal sealed partial class SettingsUI : Window
     /// Gets the available size for tab pages while leaving room for the footer.
     /// </summary>
     /// <returns>Returns a float representing the available canvas height for settings tabs.</returns>
-    private float GetCanvasSize() => ImGui.GetContentRegionMax().Y - ImGui.GetCursorPosY() - (Wordsmith.BUTTON_Y*ImGuiHelpers.GlobalScale) - (this._style.FramePadding.Y * 2);
+    // TildeTools
+    // Fixed WS reserving frame padding so it looks right in TT's settings, now reserves the real height so it doesn't scroll in the settings.
+    private float GetCanvasSize() => ImGui.GetContentRegionMax().Y - ImGui.GetCursorPosY() - (Wordsmith.BUTTON_Y*ImGuiHelpers.GlobalScale) - (this._style.ItemSpacing.Y + this._style.CellPadding.Y) * 2 - 1;
+    // TildeTools ends
 
     private bool _newMarkerHeaderOpen = false;
 
@@ -113,7 +116,9 @@ internal sealed partial class SettingsUI : Window
                 DrawGeneralTab();
                 DrawScratchPadTab();
                 DrawAliasesTab();
-                DrawSpellCheckTab();
+                // TildeTools
+                if ( Hosting.IsHosted ) DrawHostedSpellCheckTab(); else DrawSpellCheckTab();
+                // TildeTools ends
                 DrawLinkshellTab();
                 DrawColorsTab();
                 ImGui.EndTabBar();
@@ -1282,7 +1287,10 @@ internal sealed partial class SettingsUI : Window
 
             // Leave the first column blank for spacing.
             _ = ImGui.TableNextColumn();
-            if ( ImGui.Button( $"Found A Bug?", new(-1, Wordsmith.BUTTON_Y.Scale() ) ))
+            // TildeTools
+            // No bug button when hosted, since this build's bugs aren't WS's problem.
+            if ( !Hosting.IsHosted && ImGui.Button( $"Found A Bug?", new(-1, Wordsmith.BUTTON_Y.Scale() ) ))
+            // TildeTools ends
             {
                 WordsmithUI.ShowMessageBox( "Found a bug?", "If you found a bug, please post as much useful information as possible.\nThe more you are able to share with me the faster I can find the problem and fix it.\nUseful information could be:\n\t* Screenshots\n\t* Description of what you were doing\n\t* Number of pads open\n\t* Dalamud.log file\n\t* Wordsmith.json config file\n\nGo to GitHub to report the bug?", MessageBox.ButtonStyle.YesNo, (m) =>
                 {
@@ -1293,15 +1301,8 @@ internal sealed partial class SettingsUI : Window
 
             _ = ImGui.TableNextColumn();
 
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0, 0, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0.3f, 0.3f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.3f, 0.1f, 0.1f, 1f));
-
-            // Create the donation button. The link to my kofi is stored in the web manifest in case it ever changes.
-            if (ImGui.Button("Buy Me A Ko-Fi##SettingsUIBuyAKoFiButton", new(-1, Wordsmith.BUTTON_Y.Scale() ) ))
-                _ = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Wordsmith.WebManifest.Kofi) { UseShellExecute = true });
-            ImGuiExt.SetHoveredTooltip( $"This is a donation/tip button. This is absolutely not required at all.\nWhile I work hard to make Wordsmith the best I can, I do so out of passion\nand not for money. That being said, if you would like to support me then\nthank you so, so much. It's super appreciated." );
-            ImGui.PopStyleColor(3);
+            // TildeTools: Lady Defile's Ko-fi button moved to TT's Credits tab, same deal as the rest. Sorry again if this is uncouth, but, you know.
+            // The link still comes from her web manifest.
 
             //Skip the next column.
             _ = ImGui.TableNextColumn();
