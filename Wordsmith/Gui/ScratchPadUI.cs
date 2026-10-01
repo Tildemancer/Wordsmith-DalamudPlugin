@@ -573,9 +573,9 @@ internal sealed class ScratchPadUI : Window
     }
 
     // TildeTools
-    private static Vector4? HeaderColour( string header, ChatType ct ) =>
-        Hosting.HeaderColour?.Invoke( header )
-        ?? (Wordsmith.Configuration.HeaderColors.TryGetValue( (int)(ct == ChatType.CrossWorldLinkshell ? ChatType.Linkshell : ct), out Vector4 colour ) ? colour : null);
+    private static Vector4? HeaderColor( string header, ChatType ct ) =>
+        Hosting.HeaderColor?.Invoke( header )
+        ?? (Wordsmith.Configuration.HeaderColors.TryGetValue( (int)(ct == ChatType.CrossWorldLinkshell ? ChatType.Linkshell : ct), out Vector4 color ) ? color : null);
 
     private static readonly List<ChunkMarker> NoMarkers = [];
     // TildeTools ends
@@ -597,7 +597,7 @@ internal sealed class ScratchPadUI : Window
         // Its command should get the channel's color, like upstream's header.
         ooc &= !chunk.FromSplitter;
         lMarkers = chunk.FromSplitter ? NoMarkers : lMarkers;
-        Vector4? commandColour = chunk.Command.Length > 0 ? HeaderColour( chunk.Command, ct ) : null;
+        Vector4? commandColor = chunk.Command.Length > 0 ? HeaderColor( chunk.Command, ct ) : null;
         // TildeTools ends
 
         float width = 0f;
@@ -610,7 +610,7 @@ internal sealed class ScratchPadUI : Window
                 ct = ChatType.Linkshell;
 
             // TildeTools
-            ImGui.TextColored( HeaderColour( chunk.Header, ct ) ?? Vector4.One, chunk.Header.Replace( "%", "%%" ) );
+            ImGui.TextColored( HeaderColor( chunk.Header, ct ) ?? Vector4.One, chunk.Header.Replace( "%", "%%" ) );
             // TildeTools ends
             width += ImGui.CalcTextSize( chunk.Header ).X;
             sameLine = true;
@@ -673,8 +673,8 @@ internal sealed class ScratchPadUI : Window
                  && corrections[0].WordIndex == word.WordIndex + chunk.StartIndex )
                 ImGui.TextColored( Wordsmith.Configuration.SpellingErrorHighlightColor, text.Replace( "%", "%%" ) );
 
-            else if ( word.StartIndex < chunk.Command.Length && commandColour is { } colour )
-                ImGui.TextColored( colour, text.Replace( "%", "%%" ) );
+            else if ( word.StartIndex < chunk.Command.Length && commandColor is { } color )
+                ImGui.TextColored( color, text.Replace( "%", "%%" ) );
             // TildeTools ends
 
             else

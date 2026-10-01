@@ -14,12 +14,12 @@ public static class Hosting
     internal static bool IsHosted => _load != null;
 
     // A header or command's color from the game's Log Text Colors, null for none.
-    internal static Func<string, Vector4?>? HeaderColour { get; private set; }
+    internal static Func<string, Vector4?>? HeaderColor { get; private set; }
 
     // Call before WS is constructed.
     // Hosted, GetPluginConfig returns TT's config, so these settings get their own file.
-    public static void HostInOwnFile(Func<Configuration> load, Func<Configuration, bool> save, Func<string, Vector4?> headerColour) =>
-        (_load, _save, HeaderColour) = (load, save, headerColour);
+    public static void HostInOwnFile(Func<Configuration> load, Func<Configuration, bool> save, Func<string, Vector4?> headerColor) =>
+        (_load, _save, HeaderColor) = (load, save, headerColor);
 
     // Call after construction, since the constructor hooks up the installer buttons this takes back.
     public static void ReleaseInstallerButtons()
@@ -89,7 +89,7 @@ public static class Hosting
         _settings = null;
     }
 
-    internal static void Initialise()
+    internal static void Initialize()
     {
         var pi = Wordsmith.PluginInterface;
         _available = pi.GetIpcSubscriber<object?>("TildeTools.Split.Available");

@@ -123,7 +123,7 @@ public sealed class Wordsmith : IDalamudPlugin
         // Get the configuration.
         // TildeTools
         Configuration = Hosting.LoadConfig();
-        Hosting.Initialise();
+        Hosting.Initialize();
         // TildeTools ends
 
         //PluginInterface.UiBuilder.LoadImage( Path.Combine(PluginInterface.AssemblyLocation.Directory!.FullName, "mwlogo.png" ));
