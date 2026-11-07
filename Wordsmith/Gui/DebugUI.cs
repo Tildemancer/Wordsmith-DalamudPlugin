@@ -3,6 +3,9 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Interface.Utility;
 using Dalamud.Bindings.ImGui;
+// TildeTools
+using Dalamud.Interface.Utility.Raii;
+// TildeTools ends
 namespace Wordsmith.Gui;
 internal sealed class DebugUI : Window
 {
@@ -46,7 +49,9 @@ internal sealed class DebugUI : Window
         // If there is a MessageBox, draw the MessageBox section.
         if ( ImGui.CollapsingHeader( $"Message Boxes##DebugUICollapsingHeader" ) )
         {
-            ImGui.Indent();
+            // TildeTools
+            using var indent = ImRaii.PushIndent();
+            // TildeTools ends
             foreach( MessageBox mb in WordsmithUI.Windows.Where( w => w.GetType() == typeof( MessageBox ) ) )
             {
                 if( ImGui.CollapsingHeader( $"{mb.WindowName}" ) )
@@ -58,32 +63,40 @@ internal sealed class DebugUI : Window
                 if( ImGui.CollapsingHeader( $"{ew.WindowName}" ) )
                     DrawClassData( ew, $"ErrorWindowUI" );
             }
-            ImGui.Unindent();
+            // TildeTools: Unindent removed, the using ends it
         }
 
         // If there is a scratch pad, draw the scratch pad section.
         if ( ImGui.CollapsingHeader( "Scratch Pad Data##DebugUICollapsingHeader" ) )
         {
-            ImGui.Indent();
+            // TildeTools
+            using var indent = ImRaii.PushIndent();
+            // TildeTools ends
             foreach( ScratchPadUI pad in WordsmithUI.Windows.Where( w => w.GetType() == typeof( ScratchPadUI ) ) )
             {
                 if( ImGui.CollapsingHeader( $"Scratch Pad {pad.ID}##DebugUICollapsingHeader" ) )
                     DrawClassData( pad, $"ScratchPad{pad.ID}", "NextID" );
             }
-            ImGui.Unindent();
+            // TildeTools: Unindent removed, the using ends it
         }
         
         if ( ImGui.CollapsingHeader( "Console##ConsoleCollapsingHeader" ) )
         {
-            ImGui.Indent();
+            // TildeTools
+            // Upstream never unindented here, the using ends it with the block
+            using var indent = ImRaii.PushIndent();
+            // TildeTools ends
             string[] options = [.. WordsmithUI.Windows.Where(x => x is ScratchPadUI).Select(x => x.WindowName)];
             if ( _consolePadNumber >= options.Length )
                 _consolePadNumber = 0;
 
             Window? w = null;
+            // TildeTools
+            using var disabled = ImRaii.Disabled( options.Length == 0 );
+            // TildeTools ends
             if ( options.Length == 0 )
             {
-                ImGui.BeginDisabled();
+                // TildeTools: BeginDisabled moved above the if, the using ends it
                 _ = ImGui.Combo( "##ScratchPadConsoleSelectionCombo", ref _consolePadNumber, ["None"], 1 );
             }
             else
@@ -94,12 +107,14 @@ internal sealed class DebugUI : Window
                 // TildeTools ends
             }
 
-            if ( ImGui.BeginChildFrame(99, new (ImGui.GetContentRegionAvail().X, WordsmithUI.LineHeight * 15 - Wordsmith.BUTTON_Y.Scale()*2 ) ) )
+            // TildeTools
+            using ( var frame = ImRaii.ChildFrame( 99, new (ImGui.GetContentRegionAvail().X, WordsmithUI.LineHeight * 15 - Wordsmith.BUTTON_Y.Scale()*2 ) ) ) if ( frame )
+            // TildeTools ends
             {
                 if ( w is ScratchPadUI pad && Helpers.Console.Log.TryGetValue( pad, out List<string>? value ) )
                     ImGui.TextWrapped( string.Join("\n", value ) );
             }
-            ImGui.EndChildFrame();
+            // TildeTools: EndChildFrame removed, the using ends it
 
             ImGui.SetNextItemWidth( -1 );
             if ( ImGui.InputText( $"##ConsoleInputLine", ref _consoleInput, 1024, ImGuiInputTextFlags.EnterReturnsTrue ) )
@@ -108,8 +123,7 @@ internal sealed class DebugUI : Window
                     _ = Helpers.Console.ProcessCommand( pad, $"devx {_consoleInput}" );
                 _consoleInput = "";
             }
-            if ( options.Length == 0 )
-                ImGui.EndDisabled();            
+            // TildeTools: EndDisabled and its if removed, the using ends it
         }
     }
     private static void DrawClassData( object? obj, object id, params string[]? excludes )
@@ -117,28 +131,34 @@ internal sealed class DebugUI : Window
         if ( obj == null )
             return;
 
-        ImGui.Indent();
+        // TildeTools
+        using var indent = ImRaii.PushIndent();
+        // TildeTools ends
         // Get the list of results
         IReadOnlyList<(int Type, string Name, string Value) > data = obj.GetProperties(excludes);
 
         // Draw Properties
         if ( ImGui.CollapsingHeader( $"Properties##{id}DebugUIHeader" ) )
         {
-            ImGui.Indent();
+            // TildeTools
+            using var innerIndent = ImRaii.PushIndent();
+            // TildeTools ends
             foreach ( (int Type, string Name, string Value) in data.Where( d => d.Type == 0 ) )
                 ImGui.TextWrapped( $"{Name}\t: {Value.Replace("\r", "\\r").Replace("\n", "\\n")}" );
-            ImGui.Unindent();
+            // TildeTools: Unindent removed, the using ends it
         }
 
         // Draw Fields
         if ( ImGui.CollapsingHeader( $"Fields##{id}DebugUIHeader" ) )
         {
-            ImGui.Indent();
+            // TildeTools
+            using var innerIndent = ImRaii.PushIndent();
+            // TildeTools ends
             foreach ( (int Type, string Name, string Value) in data.Where( d => d.Type == 1 ) )
                 ImGui.TextWrapped( $"{Name}\t: {Value.Replace( "\r", "\\r" ).Replace( "\n", "\\n" )}" );
-            ImGui.Unindent();
+            // TildeTools: Unindent removed, the using ends it
         }
-        ImGui.Unindent();
+        // TildeTools: Unindent removed, the using ends it
     }
 }
 #endif
