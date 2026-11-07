@@ -3,6 +3,9 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Interface.Utility;
 using Wordsmith.Helpers;
 using Wordsmith;
+// TildeTools
+using Dalamud.Interface.Utility.Raii;
+// TildeTools ends
 
 namespace Wordsmith.Gui;
 
@@ -38,10 +41,14 @@ internal sealed class ThesaurusUI : Window, IDisposable
     public override void Draw()
     {
         // Create a child element for the word search.
-        if ( ImGui.BeginChild( "Word Search Window" ) )
+        // TildeTools
+        using ( var child = ImRaii.Child( "Word Search Window" ) ) if ( child )
+        // TildeTools ends
         {
             DrawSearchBar();
-            if ( ImGui.BeginChild( "SearchResultWindow" ) )
+            // TildeTools
+            using ( var results = ImRaii.Child( "SearchResultWindow" ) ) if ( results )
+            // TildeTools ends
             {
                 DrawSearchErrors();
                 for ( int i = 0, c = this._searchHelper.History.Count; i < c; )
@@ -59,9 +66,9 @@ internal sealed class ThesaurusUI : Window, IDisposable
                 }
 
                 // End the child element.
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
-            ImGui.EndChild();
+            // TildeTools: EndChild removed, the using ends it, even when the child is clipped
         }
     }
 
@@ -119,10 +126,12 @@ internal sealed class ThesaurusUI : Window, IDisposable
             bool vis = true;
             if (ImGui.CollapsingHeader($"{result.Query.Trim().CaplitalizeFirst()}##{result.ID}", ref vis, ImGuiTreeNodeFlags.DefaultOpen))
             {
-                ImGui.Indent();
+                // TildeTools
+                using var indent = ImRaii.PushIndent();
+                // TildeTools ends
                 foreach (ThesaurusEntry entry in result?.Entries ?? [] )
                     DrawEntry(entry);
-                ImGui.Unindent();
+                // TildeTools: Unindent removed, the using ends it
             }
 
             // return the visibility state.
@@ -142,7 +151,9 @@ internal sealed class ThesaurusUI : Window, IDisposable
 
         if ( ImGui.CollapsingHeader($"{entry.Type.Trim().CaplitalizeFirst()} - {entry.Definition.Replace("{it}", "").Replace("{/it}", "")}##{entry.ID}"))
         {
-            ImGui.Indent();
+            // TildeTools
+            using var indent = ImRaii.PushIndent();
+            // TildeTools ends
 
 
             if (entry.Synonyms?.Count > 0)
@@ -176,7 +187,7 @@ internal sealed class ThesaurusUI : Window, IDisposable
                 ImGui.TextWrapped("Antonyms");
                 ImGui.TextWrapped(entry.AntonymString);
             }
-            ImGui.Unindent();
+            // TildeTools: Unindent removed, the using ends it
         }
     }
     #endregion
