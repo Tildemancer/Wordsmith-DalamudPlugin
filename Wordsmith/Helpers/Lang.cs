@@ -260,7 +260,9 @@ public static partial class Lang
         // TildeTools ends
 
         // Check if the first character is capitalized.
-        bool isCapped = WordRegex().IsMatch( word ); //"ABCDEFGHIJKLMNOPQRSTUVWXYZ".Contains(word[0]);
+        // TildeTools
+        bool isCapped = word.AsSpan().TrimStart() is [var first, ..] && char.IsAsciiLetterUpper( first ); //"ABCDEFGHIJKLMNOPQRSTUVWXYZ".Contains(word[0]);
+        // TildeTools ends
 
         // Get the lowercase version of the word for the remaining tests.
         word = word.ToLower();
@@ -441,6 +443,5 @@ public static partial class Lang
     private static partial Regex WebDictionaryRegex();
     [GeneratedRegex( @"^(?:local: )*(.+)" )]
     private static partial Regex LocalDictionaryRegex();
-    [GeneratedRegex( @"^\s*[A-Z].*" )]
-    private static partial Regex WordRegex();
+    // TildeTools: WordRegex removed, see GetSuggestions
 }
