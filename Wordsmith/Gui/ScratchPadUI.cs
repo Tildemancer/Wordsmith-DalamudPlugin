@@ -300,12 +300,16 @@ internal sealed class ScratchPadUI : Window
     /// </summary>
     private void DrawMenu()
     {
-        if ( ImGui.BeginMenuBar() )
+        // TildeTools
+        using ( var menuBar = ImRaii.MenuBar() ) if ( menuBar )
+        // TildeTools ends
         {
             try
             {
                 // Start the scratch pad menu
-                if ( ImGui.BeginMenu( $"Scratch Pads##ScratchPadMenu{this.ID}" ) )
+                // TildeTools
+                using ( var menu = ImRaii.Menu( $"Scratch Pads##ScratchPadMenu{this.ID}" ) ) if ( menu )
+                // TildeTools ends
                 {
                     // New scratchpad button.
                     if ( ImGui.MenuItem( $"New Scratch Pad##NewScratchPad{this.ID}MenuItem" ) )
@@ -320,11 +324,13 @@ internal sealed class ScratchPadUI : Window
                     }
 
                     // End the scratch pad menu
-                    ImGui.EndMenu();
+                    // TildeTools: EndMenu removed, the using ends it
                 }
 
                 // Text menu
-                if ( ImGui.BeginMenu( $"Text##ScratchPad{this.ID}TextMenu" ) )
+                // TildeTools
+                using ( var menu = ImRaii.Menu( $"Text##ScratchPad{this.ID}TextMenu" ) ) if ( menu )
+                // TildeTools ends
                 {
                     #region Clear
                     if ( !this._canUndo || this._text_history.Count == 0 )
@@ -347,11 +353,14 @@ internal sealed class ScratchPadUI : Window
 
                     #region Chunks
                     bool bNoChunks = this._chunks.Count == 0;
-                    if ( bNoChunks )
-                        ImGui.BeginDisabled();
+                    // TildeTools
+                    using var disabled = ImRaii.Disabled( bNoChunks );
+                    // TildeTools ends
 
                     // Create a chunk menu and create a copy button for each chunk.
-                    if ( ImGui.BeginMenu( $"Chunks##ScratchPad{this.ID}ChunksMenu" ) )
+                    // TildeTools
+                    using ( var chunksMenu = ImRaii.Menu( $"Chunks##ScratchPad{this.ID}ChunksMenu" ) ) if ( chunksMenu )
+                    // TildeTools ends
                     {
                         for( int i = 0; i < this._chunks.Count; ++i )
                         {
@@ -360,11 +369,12 @@ internal sealed class ScratchPadUI : Window
                         }
 
                         // End chunk menu
-                        ImGui.EndMenu();
+                        // TildeTools: EndMenu removed, the using ends it
                     }
 
-                    if ( bNoChunks )
-                        ImGui.EndDisabled();
+                    // TildeTools
+                    disabled.Pop();
+                    // TildeTools ends
                     #endregion
 
                     #region History
@@ -395,7 +405,7 @@ internal sealed class ScratchPadUI : Window
                     #endregion
 
                     // End Text menu
-                    ImGui.EndMenu();
+                    // TildeTools: EndMenu removed, the using ends it
                 }
 
                 // Thesaurus menu item
@@ -418,7 +428,7 @@ internal sealed class ScratchPadUI : Window
             }
             catch ( Exception e ) { DumpError( e ); }
         }
-        ImGui.EndMenuBar();
+        // TildeTools: EndMenuBar removed, the using ends it, and only when the bar began
     }
 
     /// <summary>
@@ -434,7 +444,9 @@ internal sealed class ScratchPadUI : Window
         if ( this.Header.ChatType is ChatType.Tell or ChatType.Linkshell )
             ++columns;
 
-        if ( ImGui.BeginTable( $"##ScratchPad{this.ID}HeaderTable", columns ) )
+        // TildeTools
+        using ( var table = ImRaii.Table( $"##ScratchPad{this.ID}HeaderTable", columns ) ) if ( table )
+        // TildeTools ends
         {
             // Setup the header lock and chat mode columns.
             ImGui.TableSetupColumn( $"Scratchpad{this.ID}HeaderLockColumn", ImGuiTableColumnFlags.WidthFixed, Wordsmith.BUTTON_Y.Scale() );
@@ -506,7 +518,7 @@ internal sealed class ScratchPadUI : Window
             this.UseOOC = ooc;
 
             ImGuiExt.SetHoveredTooltip( "Enables or disables OOC markers." );
-            ImGui.EndTable();
+            // TildeTools: EndTable removed, the using ends it
         }
     }
     #endregion
@@ -525,12 +537,14 @@ internal sealed class ScratchPadUI : Window
         if ( size_y < 1 )
             return;
 
-        if ( ImGui.BeginChild( $"{Wordsmith.APPNAME}##ScratchPad{this.ID}ChildFrame", new( -1, size_y ) ) )
+        // TildeTools
+        using ( var child = ImRaii.Child( $"{Wordsmith.APPNAME}##ScratchPad{this.ID}ChildFrame", new( -1, size_y ) ) ) if ( child )
+        // TildeTools ends
         {
             // If the chunk data is null we abort the draw call and end the child.
             if ( this._chunks is null )
             {
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it on return
                 return;
             }
 
@@ -568,7 +582,7 @@ internal sealed class ScratchPadUI : Window
                 ImGui.SetScrollHereY();
                 this._textchanged = false;
             }
-            ImGui.EndChild();
+            // TildeTools: EndChild removed, the using ends it, even when the child is clipped
         }
     }
 
@@ -821,7 +835,9 @@ internal sealed class ScratchPadUI : Window
                 ImGui.OpenPopup( $"ScratchPad{this.ID}ReplaceContextMenu" );
 
             // Build the popup.
-            if ( ImGui.BeginPopup( $"ScratchPad{this.ID}ReplaceContextMenu" ) )
+            // TildeTools
+            using ( var popup = ImRaii.Popup( $"ScratchPad{this.ID}ReplaceContextMenu" ) ) if ( popup )
+            // TildeTools ends
             {
                 try
                 {
@@ -842,7 +858,9 @@ internal sealed class ScratchPadUI : Window
                             ImGui.Separator();
 
                             float childwidth = ImGui.CalcTextSize(this._replaceText).X + (20*ImGuiHelpers.GlobalScale) > ImGui.CalcTextSize(" Add To Dictionary ").X ? ImGui.CalcTextSize(this._replaceText).X + (20*ImGuiHelpers.GlobalScale) : ImGui.CalcTextSize(" Add To Dictionary ").X;
-                            if( ImGui.BeginListBox( "##SuggestionsListBox", new( childwidth, ( word.Suggestions.Count > 5 ? 5 : word.Suggestions.Count ) * Wordsmith.BUTTON_Y.Scale() ) ) )
+                            // TildeTools
+                            using ( var listBox = ImRaii.ListBox( "##SuggestionsListBox", new( childwidth, ( word.Suggestions.Count > 5 ? 5 : word.Suggestions.Count ) * Wordsmith.BUTTON_Y.Scale() ) ) ) if ( listBox )
+                            // TildeTools ends
                             {
                                 // List the suggestions.
                                 foreach( string suggestion in word.Suggestions )
@@ -853,13 +871,13 @@ internal sealed class ScratchPadUI : Window
                                         OnReplace( 0 );
                                     }
                                 }
-                                ImGui.EndListBox();
+                                // TildeTools: EndListBox removed, the using ends it
                             }
                         }
                     }
                 }
                 catch ( Exception e ) { DumpError( e ); }
-                ImGui.EndPopup();
+                // TildeTools: EndPopup removed, the using ends it
             }
             // If they mouse over the input, tell them to use the enter key to replace.
             ImGuiExt.SetHoveredTooltip( "Fix the spelling of the word and hit enter or right click for more options." );
@@ -983,21 +1001,18 @@ internal sealed class ScratchPadUI : Window
     private void DrawSpellcheckButton( float width )
     {
         // If spell check is disabled, make the button dark so it appears as though it is disabled.
-        if ( !Lang.Enabled )
-            ImGui.PushStyleVar( ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * 0.5f );
-
-        if ( this.ScratchString.Length == 0 )
-            ImGui.BeginDisabled();
+        // TildeTools
+        using var alpha = ImRaii.PushStyle( ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * 0.5f, !Lang.Enabled );
+        using var disabled = ImRaii.Disabled( this.ScratchString.Length == 0 );
+        // TildeTools ends
 
         if ( ImGui.Button( $"Spell Check##Scratch{this.ID}", new( width, Wordsmith.BUTTON_Y.Scale() ) ) )
             DoSpellCheck();
 
-        if ( this.ScratchString.Length == 0 )
-            ImGui.EndDisabled();
+        // TildeTools: EndDisabled and its if removed, the using ends it
 
         // If spell check is disabled, pop the stylevar to return to normal.
-        if ( !Lang.Enabled )
-            ImGui.PopStyleVar();
+        // TildeTools: PopStyleVar and its if removed, the using pops it
     }
     #endregion
 
@@ -1009,11 +1024,13 @@ internal sealed class ScratchPadUI : Window
     {
         Vector2 contentRegion = ImGui.GetContentRegionMax();
         contentRegion.Y -= ImGui.GetCursorPosY() + GetFooterHeight();
-        if ( ImGui.BeginChild( $"HistoryChild", contentRegion ) )
+        // TildeTools
+        using ( var child = ImRaii.Child( $"HistoryChild", contentRegion ) ) if ( child )
+        // TildeTools ends
         {
             for ( int i = 0; i < this._text_history.Count; ++i )
                 DrawHistoryItem( this._text_history[i], i );
-            ImGui.EndChild();
+            // TildeTools: EndChild removed, the using ends it, even when the child is clipped
         }
     }
 
@@ -1028,39 +1045,44 @@ internal sealed class ScratchPadUI : Window
         ImGui.SetNextItemWidth( ImGui.GetContentRegionAvail().X - style.WindowPadding.X );
         if ( ImGui.CollapsingHeader( $"{sUnwrapped.Replace( "\n", "" )}##HistoryItemHeader" ) )
         {
-            ImGui.Indent();
+            // TildeTools
+            using var indent = ImRaii.PushIndent();
+            // TildeTools ends
             try
             {
-                ImGui.BeginGroup();
+                // TildeTools: BeginGroup moved below the early return, upstream returned with the group open
                 // Get the text chunks.
                 List<TextChunk>? result = ChatHelper.FFXIVify(pad.Header!, pad.ScratchText.Unwrap(), pad.UseOOC);
                 if ( result == null )
                     return;
 
-                List<TextChunk> tlist = result;
-                float fSpaceWidth = ImGui.CalcTextSize( " " ).X;
-                // Display the chunks.
-                for ( int i = 0; i < tlist.Count; ++i )
+                // TildeTools
+                // A block, so the group ends before the rect below reads it
+                using ( ImRaii.Group() )
                 {
-                    if ( i > 0 )
-                        ImGui.Spacing();
-
-                    // TildeTools
-                    // The history item's own count and OOC.
-                    // Upstream used the open pad's this._chunks.Count and this.UseOOC.
-                    List<ChunkMarker> markers = [];
-                    foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
+                    List<TextChunk> tlist = result;
+                    float fSpaceWidth = ImGui.CalcTextSize( " " ).X;
+                    // Display the chunks.
+                    for ( int i = 0; i < tlist.Count; ++i )
                     {
-                        if( cm.AppliesTo( i, tlist.Count ) && cm.Visible( pad.UseOOC, tlist.Count ) )
-                            markers.Add( cm );
+                        if ( i > 0 )
+                            ImGui.Spacing();
+
+                        // The history item's own count and OOC.
+                        // Upstream used the open pad's this._chunks.Count and this.UseOOC.
+                        List<ChunkMarker> markers = [];
+                        foreach( ChunkMarker cm in Wordsmith.Configuration.ChunkMarkers )
+                        {
+                            if( cm.AppliesTo( i, tlist.Count ) && cm.Visible( pad.UseOOC, tlist.Count ) )
+                                markers.Add( cm );
+                        }
+
+                        DrawChunkItem( tlist[i], pad.Header!.ChatType, pad.UseOOC, i, tlist.Count, fSpaceWidth, markers, null );
                     }
-                    // TildeTools ends
 
-                    DrawChunkItem( tlist[i], pad.Header!.ChatType, pad.UseOOC, i, tlist.Count, fSpaceWidth, markers, null );
+                    // End the group.
                 }
-
-                // End the group.
-                ImGui.EndGroup();
+                // TildeTools ends
 
                 // Create a rectangle around ther group. This will be used to detect if the mouse is clicking
                 // in this history item.
@@ -1072,7 +1094,9 @@ internal sealed class ScratchPadUI : Window
                 r.Right = (int)vMax.X;
                 r.Bottom = (int)vMax.Y;
 
-                if ( ImGui.BeginPopup( $"ScratchPad{this.ID}History{idx}Popup" ) )
+                // TildeTools
+                using ( var popup = ImRaii.Popup( $"ScratchPad{this.ID}History{idx}Popup" ) ) if ( popup )
+                // TildeTools ends
                 {
                     if( ImGui.MenuItem( $"Reload Pad State##ScratchPad{this.ID}HistoryItem{idx}Reload" ) )
                     {
@@ -1147,7 +1171,7 @@ internal sealed class ScratchPadUI : Window
                         ImGui.CloseCurrentPopup();
                     }
 
-                    ImGui.EndPopup();
+                    // TildeTools: EndPopup removed, the using ends it
                 }
 
                 // If the window is focused check if a right click was performed on the object.
@@ -1155,7 +1179,7 @@ internal sealed class ScratchPadUI : Window
                     ImGui.OpenPopup( $"ScratchPad{this.ID}History{idx}Popup" );
             }
             catch ( Exception e ) { DumpError( e ); }
-            ImGui.Unindent();
+            // TildeTools: Unindent removed, the using ends it, on the early return too
         }
     }
 
@@ -1205,11 +1229,15 @@ internal sealed class ScratchPadUI : Window
     {
         Vector2 contentRegion = ImGui.GetContentRegionMax();
         contentRegion.Y -= ImGui.GetCursorPosY() + GetFooterHeight();
-        if ( ImGui.BeginChild( $"HistoryChild", contentRegion ) )
+        // TildeTools
+        using ( var child = ImRaii.Child( $"HistoryChild", contentRegion ) ) if ( child )
+        // TildeTools ends
         {
             ImGui.TextWrapped( $"The following is a list of all words used in this scratch pad. Note that this list is only words that were copied to the clipboard." );
             // Display the stats as a table
-            if ( ImGui.BeginTable( $"StatsTable{this.ID}", 2 ) )
+            // TildeTools
+            using ( var table = ImRaii.Table( $"StatsTable{this.ID}", 2 ) ) if ( table )
+            // TildeTools ends
             {
                 ImGui.TableSetupColumn( $"StatsTableWordCol", ImGuiTableColumnFlags.WidthStretch );
                 ImGui.TableSetupColumn( $"StatsTableUsesCol", ImGuiTableColumnFlags.WidthStretch );
@@ -1248,9 +1276,9 @@ internal sealed class ScratchPadUI : Window
                     ImGui.Text( $"{kvp.Value}" );
                 }
 
-                ImGui.EndTable();
+                // TildeTools: EndTable removed, the using ends it
             }
-            ImGui.EndChild();
+            // TildeTools: EndChild removed, the using ends it, even when the child is clipped
         }
     }
 
