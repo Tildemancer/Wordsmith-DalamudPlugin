@@ -4,6 +4,9 @@ using Dalamud.Interface.Utility;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
+// TildeTools
+using Dalamud.Interface.Utility.Raii;
+// TildeTools ends
 
 namespace Wordsmith.Gui;
 
@@ -19,10 +22,14 @@ internal sealed class ScratchPadHelpUI : Window
 
     public override void Draw()
     {
-        if (ImGui.BeginTabBar($"{Wordsmith.APPNAME}HelpTabBar"))
+        // TildeTools
+        using ( var tabBar = ImRaii.TabBar( $"{Wordsmith.APPNAME}HelpTabBar" ) ) if ( tabBar )
+        // TildeTools ends
         {
             // General tab.
-            if (ImGui.BeginTabItem($"General##HelpTabBarItem"))
+            // TildeTools
+            using ( var tab = ImRaii.TabItem( $"General##HelpTabBarItem" ) ) if ( tab )
+            // TildeTools ends
             {
                 //ImGui.Image( MerriamWebsterLogo.ImGuiHandle, ImGuiHelpers.ScaledVector2( 64, 64 ) );
                 ImGui.Image(
@@ -49,7 +56,7 @@ internal sealed class ScratchPadHelpUI : Window
                 ImGui.Separator();
                 ImGui.Spacing();
                 ImGui.TextWrapped("/Tell is a little different than other headers because it requires a target. Your target can be User Name@World or any usual placehold.\n\nMore information on Placeholders in the Placeholders tab.");
-                ImGui.EndTabItem();
+                // TildeTools: EndTabItem removed, the using ends it after the wiki button
                 ImGui.Separator();
                 ImGui.Spacing();
                 if (ImGui.Button("Github Wiki##ScratchPadWikiButton"))
@@ -59,10 +66,14 @@ internal sealed class ScratchPadHelpUI : Window
             }
 
             // Placeholders tab.
-            if (ImGui.BeginTabItem($"Placeholders##HelpTabBarItem"))
+            // TildeTools
+            using ( var tab = ImRaii.TabItem( $"Placeholders##HelpTabBarItem" ) ) if ( tab )
+            // TildeTools ends
             {
                 // Create a table.
-                if (ImGui.BeginTable("ScratchPadTellHelpPlaceholderTable", 2, ImGuiTableFlags.Borders))
+                // TildeTools
+                using ( var table = ImRaii.Table( "ScratchPadTellHelpPlaceholderTable", 2, ImGuiTableFlags.Borders ) ) if ( table )
+                // TildeTools ends
                 {
                     // The table will have two headers, one for placeholder text and one for placeholder description.
                     ImGui.TableSetupColumn("PlaceholderValueColumn", ImGuiTableColumnFlags.WidthFixed, 125 * ImGuiHelpers.GlobalScale);
@@ -125,15 +136,19 @@ internal sealed class ScratchPadHelpUI : Window
                         ImGui.TextWrapped(descriptions[i]);
                     }
 
-                    ImGui.EndTable();
+                    // TildeTools: EndTable removed, the using ends it
                 }
-                ImGui.EndTabItem();
+                // TildeTools: EndTabItem removed, the using ends it
             }
 
-            if (ImGui.BeginTabItem($"Roleplaying##HelpTabBarItem"))
+            // TildeTools
+            using ( var tab = ImRaii.TabItem( $"Roleplaying##HelpTabBarItem" ) ) if ( tab )
+            // TildeTools ends
             {
                 ImGui.TextWrapped($"Some useful terms to know about roleplaying.");
-                if (ImGui.BeginTable("##RoleplayTermsHelpTable", 2))
+                // TildeTools
+                using ( var table = ImRaii.Table( "##RoleplayTermsHelpTable", 2 ) ) if ( table )
+                // TildeTools ends
                 {
                     ImGui.TableSetupColumn("RoleplayHelpTermColumn", ImGuiTableColumnFlags.WidthFixed, ImGui.CalcTextSize("God Modding").X);
                     ImGui.TableSetupColumn("RoleplayHelpDescriptionColumn", ImGuiTableColumnFlags.WidthStretch);
@@ -176,12 +191,12 @@ internal sealed class ScratchPadHelpUI : Window
                         _ = ImGui.TableNextColumn();
                         ImGui.TextWrapped(desc[i]);
                     }
-                    ImGui.EndTable();
+                    // TildeTools: EndTable removed, the using ends it
                 }
-                ImGui.EndTabItem();
+                // TildeTools: EndTabItem removed, the using ends it
             }
 
-            ImGui.EndTabBar();
+            // TildeTools: EndTabBar removed, the using ends it
         }
     }
 }
