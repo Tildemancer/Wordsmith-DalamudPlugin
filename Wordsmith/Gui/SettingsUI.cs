@@ -4,6 +4,9 @@ using Dalamud.Interface.Utility;
 using Dalamud.Bindings.ImGui;
 using Wordsmith.Enums;
 using Wordsmith.Helpers;
+// TildeTools
+using Dalamud.Interface.Utility.Raii;
+// TildeTools ends
 
 namespace Wordsmith.Gui;
 
@@ -111,7 +114,9 @@ internal sealed partial class SettingsUI : Window
             if ( Wordsmith.Configuration.RecentlySaved )
                 ResetValues();
 
-            if ( ImGui.BeginTabBar( "SettingsUITabBar" ) )
+            // TildeTools
+            using ( var tabBar = ImRaii.TabBar( "SettingsUITabBar" ) ) if ( tabBar )
+            // TildeTools ends
             {
                 DrawGeneralTab();
                 DrawScratchPadTab();
@@ -121,7 +126,7 @@ internal sealed partial class SettingsUI : Window
                 // TildeTools ends
                 DrawLinkshellTab();
                 DrawColorsTab();
-                ImGui.EndTabBar();
+                // TildeTools: EndTabBar removed, the using ends it
             }
 
             ImGui.Separator();
@@ -135,9 +140,13 @@ internal sealed partial class SettingsUI : Window
 
     private void DrawGeneralTab()
     {
-        if ( ImGui.BeginTabItem( "General##SettingsUITabItem" ) )
+        // TildeTools
+        using ( var tab = ImRaii.TabItem( "General##SettingsUITabItem" ) ) if ( tab )
+        // TildeTools ends
         {
-            if ( ImGui.BeginChild( "GeneralSettingsChildFrame", new( -1, GetCanvasSize() ) ) )
+            // TildeTools
+            using ( var child = ImRaii.Child( "GeneralSettingsChildFrame", new( -1, GetCanvasSize() ) ) ) if ( child )
+            // TildeTools ends
             {
                 _ = ImGui.Checkbox( $"Show Advanced Settings", ref this._showAdvancedSettings );
                 ImGui.SameLine();
@@ -169,23 +178,29 @@ internal sealed partial class SettingsUI : Window
                 _ = ImGui.Checkbox( "Move repeated search to top of history.", ref this._researchToTopChange );
                 ImGuiExt.SetHoveredTooltip( "If enabled, when searching for a word you've searched\nalready, it will move it to the top of the list." );
 
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
-            ImGui.EndTabItem();
+            // TildeTools: EndTabItem removed, the using ends it
         }
     }
 
     private void DrawScratchPadTab()
     {
-        if ( ImGui.BeginTabItem( "Scratch Pad##SettingsUITabItem" ) )
+        // TildeTools
+        using ( var tab = ImRaii.TabItem( "Scratch Pad##SettingsUITabItem" ) ) if ( tab )
+        // TildeTools ends
         {
-            if ( ImGui.BeginChild( "SettingsUIScratchPadChildFrame", new( -1, GetCanvasSize() ) ) )
+            // TildeTools
+            using ( var child = ImRaii.Child( "SettingsUIScratchPadChildFrame", new( -1, GetCanvasSize() ) ) ) if ( child )
+            // TildeTools ends
             {
                 //ImGui.Text( "General Behavior" );
                 if ( ImGui.CollapsingHeader( "General Behavior" ) )
                 {
-                    ImGui.Indent();
-                    if ( ImGui.BeginTable( "SettingsUiScratchPadBehaviorTable", 2, ImGuiTableFlags.BordersH | ImGuiTableFlags.BordersInnerV ) )
+                    // TildeTools
+                    using var indent = ImRaii.PushIndent();
+                    using ( var table = ImRaii.Table( "SettingsUiScratchPadBehaviorTable", 2, ImGuiTableFlags.BordersH | ImGuiTableFlags.BordersInnerV ) ) if ( table )
+                    // TildeTools ends
                     {
                         ImGui.TableSetupColumn( "SettingsUiScratchPadBehaviorTableLeftColumn" );
                         ImGui.TableSetupColumn( "SettingsUiScratchPadBehaviorTableRightColumn" );
@@ -227,9 +242,9 @@ internal sealed partial class SettingsUI : Window
                         _ = ImGui.Checkbox( "Parse Header From Text##SettingsUICheckbox", ref this._detectHeader );
                         ImGuiExt.SetHoveredTooltip( "When enabled, typing a header into the input text of a scratch pad will cause\nthe scratchpad to try to parse the desired header automatically." );
 
-                        ImGui.EndTable();
+                        // TildeTools: EndTable removed, the using ends it
                     }
-                    ImGui.Unindent();
+                    // TildeTools: Unindent removed, the using ends it
                 }
                 ImGui.Spacing();
 
@@ -237,8 +252,10 @@ internal sealed partial class SettingsUI : Window
                 { 
                     if (ImGui.CollapsingHeader( "Text Parsing & Interpolation##settingsheader" ) )
                     {
-                        ImGui.Indent();
-                        if ( ImGui.BeginTable( "SettingsUiScratchPadBehaviorTable", 2, ImGuiTableFlags.BordersH | ImGuiTableFlags.BordersInnerV ) )
+                        // TildeTools
+                        using var indent = ImRaii.PushIndent();
+                        using ( var table = ImRaii.Table( "SettingsUiScratchPadBehaviorTable", 2, ImGuiTableFlags.BordersH | ImGuiTableFlags.BordersInnerV ) ) if ( table )
+                        // TildeTools ends
                         {
                             ImGui.TableSetupColumn( "SettingsUiScratchPadChildTableLeftColumn" );
                             ImGui.TableSetupColumn( "SettingsUiScratchPadChildTableRightColumn" );
@@ -269,16 +286,18 @@ internal sealed partial class SettingsUI : Window
                                 _ = ImGui.InputText( $"Encpasulation Terminators##ScratchPadEncapCharsText", ref this._encapTerminators, 32 );
                                 ImGuiExt.SetHoveredTooltip( $"Each of these characters ends an encapsulator.\nThis is used with sentence terminators in case of encapsulation for chunk breaks\ni.e. \"A) B\" will not count but \"A.) B\" will." );
                             }
-                            ImGui.EndTable();
+                            // TildeTools: EndTable removed, the using ends it
                         }
-                        ImGui.Unindent();
+                        // TildeTools: Unindent removed, the using ends it
                     }
                     ImGui.Spacing();
                 }
 
                 if ( ImGui.CollapsingHeader( "Marks & Tags##settingsheader" ) )
                 {
-                    ImGui.Indent();
+                    // TildeTools
+                    using var indent = ImRaii.PushIndent();
+                    // TildeTools ends
 
                     #region OOC Tags
                     // Draws the OOC tag editor
@@ -315,9 +334,13 @@ internal sealed partial class SettingsUI : Window
                         int size_scaler = _MAX_MARKER_FRAME_Y - this._chunkMarkers.Count >= 3 ? this._chunkMarkers.Count + 3 : _MAX_MARKER_FRAME_Y;
                         size_y += (Wordsmith.BUTTON_Y.Scale() + this._style.FramePadding.Y) * size_scaler;
 
-                        if ( ImGui.BeginChild( "MarkersChildObject", new Vector2( -1, size_y ), true ) )
+                        // TildeTools
+                        using ( var markers = ImRaii.Child( "MarkersChildObject", new Vector2( -1, size_y ), true ) ) if ( markers )
+                        // TildeTools ends
                         {
-                            if ( ImGui.BeginTable( "MarkersChildTable", 7, ImGuiTableFlags.RowBg ) )
+                            // TildeTools
+                            using ( var table = ImRaii.Table( "MarkersChildTable", 7, ImGuiTableFlags.RowBg ) ) if ( table )
+                            // TildeTools ends
                             {
                                 ImGui.TableSetupColumn( "MarkerMoveColumn", ImGuiTableColumnFlags.WidthFixed, Wordsmith.BUTTON_Y.Scale() * 2 );
                                 ImGui.TableSetupColumn( "MarkerTextColumn", ImGuiTableColumnFlags.WidthStretch );
@@ -344,17 +367,24 @@ internal sealed partial class SettingsUI : Window
 
                                 Vector2 padding = this._style.FramePadding;
                                 int i = 0;
+                                // TildeTools
+                                using var id = new ImRaii.IdDisposable();
+                                using var disabled = new ImRaii.DisabledDisposable();
+                                // TildeTools ends
                                 for ( ; i < this._chunkMarkers.Count; i++ )
                                 {
                                     ChunkMarker cm = this._chunkMarkers[i];
 
-                                    ImGui.PushID( $"IconButtonID{i}" );
+                                    // TildeTools
+                                    id.Push( $"IconButtonID{i}" );
+                                    // TildeTools ends
                                     _ = ImGui.TableNextColumn();
                                     // If this is the first item or the item above it is in a different position then
                                     // disable the button to prevent the user from trying to improperly organize the list
                                     bool bDisableMove = i == 0 || this._chunkMarkers[i-1].Position < this._chunkMarkers[i].Position;
-                                    if ( bDisableMove )
-                                        ImGui.BeginDisabled();
+                                    // TildeTools
+                                    disabled.Push( bDisableMove );
+                                    // TildeTools ends
                                     if ( Dalamud.Interface.Components.ImGuiComponents.IconButton( FontAwesomeIcon.ArrowUp ) )
                                     {
                                         this._chunkMarkers.RemoveAt( i );
@@ -362,15 +392,17 @@ internal sealed partial class SettingsUI : Window
                                         this._chunkMarkers = ChunkMarker.SortList( this._chunkMarkers );
                                     }
                                     ImGuiExt.SetHoveredTooltip( "Move this marker higher in the list. Markers are drawn in order from top\nto bottom. If two markers are set to show in the same\nposition then the higher one will be drawn first. Markers\ncan only be moved inside their own position group." );
-                                    if ( bDisableMove )
-                                        ImGui.EndDisabled();
+                                    // TildeTools
+                                    disabled.Pop();
+                                    // TildeTools ends
 
                                     ImGui.SameLine( 0, 0 );
                                     // If this is the last item in the list or the item beneath it is in a different position
                                     // then disable the button to prevent the user from trying to improperly organize the list
                                     bDisableMove = i == this._chunkMarkers.Count - 1 || this._chunkMarkers[i+1].Position > this._chunkMarkers[i].Position;
-                                    if ( bDisableMove )
-                                        ImGui.BeginDisabled();
+                                    // TildeTools
+                                    disabled.Push( bDisableMove );
+                                    // TildeTools ends
                                     if ( Dalamud.Interface.Components.ImGuiComponents.IconButton( FontAwesomeIcon.ArrowDown ) )
                                     {
                                         this._chunkMarkers.RemoveAt( i );
@@ -378,8 +410,9 @@ internal sealed partial class SettingsUI : Window
                                         this._chunkMarkers = ChunkMarker.SortList( this._chunkMarkers );
                                     }
                                     ImGuiExt.SetHoveredTooltip( "Move this marker lower in the list. Markers are drawn in order from top\nto bottom. If two markers are set to show in the same\nposition then the higher one will be drawn first. Markers\ncan only be moved inside their own position group." );
-                                    if ( bDisableMove )
-                                        ImGui.EndDisabled();
+                                    // TildeTools
+                                    disabled.Pop();
+                                    // TildeTools ends
 
                                     _ = ImGui.TableNextColumn();
                                     ImGui.Text( $"{cm.Text}" );
@@ -415,9 +448,11 @@ internal sealed partial class SettingsUI : Window
                                     if ( Dalamud.Interface.Components.ImGuiComponents.IconButton( FontAwesomeIcon.Trash ) )
                                         this._chunkMarkers.RemoveAt( i );
                                     ImGuiExt.SetHoveredTooltip( "Delete this entry." );
-                                    ImGui.PopID();
+                                    // TildeTools
+                                    id.Pop();
+                                    // TildeTools ends
                                 }
-                                ImGui.EndTable();
+                                // TildeTools: EndTable removed, the using ends it
                             }
 
                             ImGui.Spacing();
@@ -425,7 +460,9 @@ internal sealed partial class SettingsUI : Window
                             if( ImGui.CollapsingHeader( "Create New Marker##SettingHeader" ) )
                             {
                                 this._newMarkerHeaderOpen = true;
-                                ImGui.Indent();
+                                // TildeTools
+                                using var markerIndent = ImRaii.PushIndent();
+                                // TildeTools ends
                                 string sTemp = this._newMarker.Text;
                                 ImGui.SetNextItemWidth( -1 );
                                 _ = ImGui.InputTextWithHint( "##SettingsUINewMarkerText", "Marker Text", ref sTemp, 32 );
@@ -483,9 +520,14 @@ internal sealed partial class SettingsUI : Window
                                 #region New Marker Repeat Style
                                 ImGui.Text( $"Show On: " );
                                 ImGui.SameLine();
+                                // TildeTools
+                                using var disabled = new ImRaii.DisabledDisposable();
+                                // TildeTools ends
                                 if( ( this._newMarker.DisplayMode & DisplayMode.WithAnyChunkCount ) == DisplayMode.WithSingleChunk )
                                 {
-                                    ImGui.BeginDisabled();
+                                    // TildeTools
+                                    disabled.Push();
+                                    // TildeTools ends
                                     this._newMarker.RepeatMode = RepeatMode.All;
                                 }
                                 int iRepeatSelection = (int)this._newMarker.RepeatMode;
@@ -493,13 +535,17 @@ internal sealed partial class SettingsUI : Window
                                 ImGui.SetNextItemWidth( ImGui.GetContentRegionAvail().X );
                                 _ = ImGui.Combo( "##RepeatStyleSelection", ref iRepeatSelection, aRepeatStyles, aRepeatStyles.Length );
                                 ImGuiExt.SetHoveredTooltip( "Set the display mode for the marker.\nNote: If you display with only one chunk then this option is disabled." );
-                                if( ( this._newMarker.DisplayMode & DisplayMode.WithAnyChunkCount ) == DisplayMode.WithSingleChunk )
-                                    ImGui.EndDisabled();
+                                // TildeTools
+                                disabled.Pop();
+                                // TildeTools ends
                                 this._newMarker.RepeatMode = (RepeatMode)iRepeatSelection;
 
                                 if( this._newMarker.RepeatMode == RepeatMode.EveryNth )
                                 {
-                                    ImGui.Indent();
+                                    // TildeTools
+                                    // Upstream never unindented here, so the marker indent carries it to the end of the section, as upstream drew it
+                                    markerIndent.Indent();
+                                    // TildeTools ends
                                     float fRepeatLabelWidth = ImGui.CalcTextSize("Repeat every ").X;
                                     ImGui.SetNextItemWidth( fRepeatLabelWidth );
                                     ImGui.Text( "Repeat every " );
@@ -524,7 +570,9 @@ internal sealed partial class SettingsUI : Window
 
                                 #region Display Mode
                                 ImGui.Text( "Display when there is/are _____ chunks:" );
-                                ImGui.Indent();
+                                // TildeTools
+                                using var chunkIndent = ImRaii.PushIndent();
+                                // TildeTools ends
 
                                 // Convert the flags to booleans
                                 bool bSingleChunk   = (this._newMarker.DisplayMode & DisplayMode.WithAnyChunkCount) == DisplayMode.WithSingleChunk;
@@ -554,10 +602,15 @@ internal sealed partial class SettingsUI : Window
                                     bMultiChunk = false;
                                     bAnyChunk = true;
                                 }
-                                ImGui.Unindent();
+                                // TildeTools
+                                // Ended here, since a using block would scope the bools used below
+                                chunkIndent.Dispose();
+                                // TildeTools ends
 
                                 ImGui.Text( "Display when OOC is _____:" );
-                                ImGui.Indent();
+                                // TildeTools
+                                using var oocIndent = ImRaii.PushIndent();
+                                // TildeTools ends
                                 bool bWithOOC = (this._newMarker.DisplayMode & DisplayMode.AnyOOC) == DisplayMode.WithOOC;
                                 bool bWithoutOOC = (this._newMarker.DisplayMode & DisplayMode.AnyOOC) == DisplayMode.WithoutOOC;
                                 bool bAnyOOC = (this._newMarker.DisplayMode & DisplayMode.AnyOOC) == DisplayMode.AnyOOC;
@@ -583,7 +636,10 @@ internal sealed partial class SettingsUI : Window
                                     bWithoutOOC = false;
                                     bAnyOOC = true;
                                 }
-                                ImGui.Unindent();
+                                // TildeTools
+                                // Ended here, since a using block would scope the bools used below
+                                oocIndent.Dispose();
+                                // TildeTools ends
 
                                 // Convert the booleans back to flags
                                 this._newMarker.DisplayMode = 0;
@@ -614,22 +670,24 @@ internal sealed partial class SettingsUI : Window
                                         this._newMarker = new();
                                     }
                                 }
-                                ImGui.Unindent();
+                                // TildeTools: Unindent removed, the using ends it
                             }
                             else
                             {
                                 this._newMarkerHeaderOpen = false;
                             }
                         }
-                        ImGui.EndChild();
+                        // TildeTools: EndChild removed, the using ends it
                     }
-                    ImGui.Unindent();
+                    // TildeTools: Unindent removed, the using ends it
                 }
                 ImGui.Spacing();
 
                 if ( ImGui.CollapsingHeader( "Text Input Options##settingsheader" ) )
                 {
-                    ImGui.Indent();
+                    // TildeTools
+                    using var indent = ImRaii.PushIndent();
+                    // TildeTools ends
                     float dragWidth = ImGui.GetContentRegionAvail().X - (125 * ImGuiHelpers.GlobalScale);
                     if( Wordsmith.Configuration.ShowAdvancedSettings )
                     {
@@ -648,28 +706,37 @@ internal sealed partial class SettingsUI : Window
                     _ = ImGui.Checkbox( "Maximize Input Area##SettingsUICheckbox", ref this._hideChunkDisplay );
                     ImGuiExt.SetHoveredTooltip( "When enabled, the text input area will expand to it's maximum size and scale with the Scratch Pad. This will disable the Chunk Display Area." );
 
-                    if( this._hideChunkDisplay )
-                        ImGui.BeginDisabled();
+                    // TildeTools
+                    using var disabled = ImRaii.Disabled( this._hideChunkDisplay );
+                    // TildeTools ends
 
                     ImGui.SetNextItemWidth( dragWidth );
                     _ = ImGui.DragInt( "Input Height##ScratchPadInputLineHeight", ref this._scratchInputLineHeight, 0.1f, 3, 25 );
                     ImGuiExt.SetHoveredTooltip( "This is the maximum height of the text input (in lines).\nThe text input will grow up to the maximum size as\nlong as there is room for it to do so." );
 
-                    if( this._hideChunkDisplay )
-                        ImGui.EndDisabled();
+                    // TildeTools
+                    disabled.Pop();
 
-                    ImGui.Unindent();
+                    // Ended here, so the separator below stays unindented
+                    indent.Dispose();
+                    // TildeTools ends
                     ImGui.Separator();
                 }
                 ImGui.Spacing();
 
                 if ( ImGui.CollapsingHeader( "Open Scratch Pads##settingsheader" ) )
                 {
-                    ImGui.Indent();
+                    // TildeTools
+                    using var indent = ImRaii.PushIndent();
+                    // TildeTools ends
                     float size_y = ImGui.GetContentRegionAvail().Y - Wordsmith.BUTTON_Y.Scale() - this._style.FramePadding.Y*2;
-                    if ( ImGui.BeginChild( "OpenPadsChildObject", new(-1, size_y > Wordsmith.BUTTON_Y.Scale() *2 ? size_y : Wordsmith.BUTTON_Y.Scale() *2 ) ))
+                    // TildeTools
+                    using ( var padList = ImRaii.Child( "OpenPadsChildObject", new(-1, size_y > Wordsmith.BUTTON_Y.Scale() *2 ? size_y : Wordsmith.BUTTON_Y.Scale() *2 ) ) ) if ( padList )
+                    // TildeTools ends
                     {
-                        if ( ImGui.BeginTable( $"SettingsPadListTable", 4 ) )
+                        // TildeTools
+                        using ( var table = ImRaii.Table( $"SettingsPadListTable", 4 ) ) if ( table )
+                        // TildeTools ends
                         {
                             ImGui.TableSetupColumn( "SettingsUIPadListIDColumn", ImGuiTableColumnFlags.WidthFixed, Wordsmith.BUTTON_Y.Scale() );
                             ImGui.TableSetupColumn( "SettingsUIPadListDescColumn", ImGuiTableColumnFlags.WidthStretch, 1 );
@@ -748,10 +815,10 @@ internal sealed partial class SettingsUI : Window
                                     }
                                 }
                             }
-                            ImGui.EndTable();
+                            // TildeTools: EndTable removed, the using ends it
                         }
                     }
-                    ImGui.EndChild();
+                    // TildeTools: EndChild removed, the using ends it
                     if( ImGui.Button( "Close All", new( -1, Wordsmith.BUTTON_Y.Scale() ) ) )
                     {
                         foreach( Window w in WordsmithUI.Windows )
@@ -760,19 +827,23 @@ internal sealed partial class SettingsUI : Window
                                 WordsmithUI.RemoveWindow( pad );
                         }
                     }
-                    ImGui.Unindent();
+                    // TildeTools: Unindent removed, the using ends it
                  }
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
-            ImGui.EndTabItem();
+            // TildeTools: EndTabItem removed, the using ends it
         }
     }
 
     private void DrawAliasesTab()
     {
-        if ( ImGui.BeginTabItem( "Aliases##SettingsUITabItem" ) )
+        // TildeTools
+        using ( var tab = ImRaii.TabItem( "Aliases##SettingsUITabItem" ) ) if ( tab )
+        // TildeTools ends
         {
-            if ( ImGui.BeginChild( "AliasSettingsChild", new( -1, GetCanvasSize() ) ) )
+            // TildeTools
+            using ( var child = ImRaii.Child( "AliasSettingsChild", new( -1, GetCanvasSize() ) ) ) if ( child )
+            // TildeTools ends
             {
                 //
                 // Aliases
@@ -781,7 +852,9 @@ internal sealed partial class SettingsUI : Window
                 int spacing = 10;
                 int tellBarWidth = 200;
 
-                if ( ImGui.BeginTable( "AliasesTabTable", 3, ImGuiTableFlags.BordersH ) )
+                // TildeTools
+                using ( var table = ImRaii.Table( "AliasesTabTable", 3, ImGuiTableFlags.BordersH ) ) if ( table )
+                // TildeTools ends
                 {
                     ImGui.TableSetupColumn( "AliasChatTypeHeaderColumn", ImGuiTableColumnFlags.WidthFixed, 150*ImGuiHelpers.GlobalScale );
                     ImGui.TableSetupColumn( "AliasTextInputColumn", ImGuiTableColumnFlags.WidthStretch );
@@ -921,11 +994,10 @@ internal sealed partial class SettingsUI : Window
                     ImGui.Spacing();
 
                     // Put the + button. Disable until valid data is entered.
-                    if ( !bEnableAddAlias )
-                        ImGui.BeginDisabled();
-                    add |= ImGui.Button( "+##NewAliasAddButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) );
-                    if ( !bEnableAddAlias )
-                        ImGui.EndDisabled();
+                    // TildeTools
+                    using ( ImRaii.Disabled( !bEnableAddAlias ) )
+                        add |= ImGui.Button( "+##NewAliasAddButton", ImGuiHelpers.ScaledVector2( Wordsmith.BUTTON_Y, Wordsmith.BUTTON_Y ) );
+                    // TildeTools ends
 
                     if ( add && this._newAliasSelection > 0 && bEnableAddAlias)
                     {
@@ -981,19 +1053,23 @@ internal sealed partial class SettingsUI : Window
                     ImGui.Spacing();
                     #endregion
 
-                    ImGui.EndTable();
+                    // TildeTools: EndTable removed, the using ends it
                 }
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
-            ImGui.EndTabItem();
+            // TildeTools: EndTabItem removed, the using ends it
         }
     }
 
     private void DrawSpellCheckTab()
     {
-        if (ImGui.BeginTabItem("Spell Check##SettingsUITabItem"))
+        // TildeTools
+        using ( var tab = ImRaii.TabItem( "Spell Check##SettingsUITabItem" ) ) if ( tab )
+        // TildeTools ends
         {
-            if (ImGui.BeginChild("DictionarySettingsChild", new(-1, GetCanvasSize() ) ))
+            // TildeTools
+            using ( var child = ImRaii.Child( "DictionarySettingsChild", new( -1, GetCanvasSize() ) ) ) if ( child )
+            // TildeTools ends
             {
                 _ = ImGui.Checkbox( "Auto-Spell Check", ref this._autospellcheck );
                 ImGuiExt.SetHoveredTooltip( "When enabled, spell check will automatically run after a pause in typing is detected." );
@@ -1085,7 +1161,9 @@ internal sealed partial class SettingsUI : Window
                 ImGui.Separator();
 
                 // Custom Dictionary Table
-                if (ImGui.BeginTable($"CustomDictionaryEntriesTable", 2, ImGuiTableFlags.BordersH))
+                // TildeTools
+                using ( var table = ImRaii.Table( $"CustomDictionaryEntriesTable", 2, ImGuiTableFlags.BordersH ) ) if ( table )
+                // TildeTools ends
                 {
                     ImGui.TableSetupColumn("CustomDictionaryWordColumn", ImGuiTableColumnFlags.WidthStretch, 2);
                     ImGui.TableSetupColumn("CustomDictionaryDeleteColumn", ImGuiTableColumnFlags.WidthFixed, 65 * ImGuiHelpers.GlobalScale);
@@ -1130,23 +1208,29 @@ internal sealed partial class SettingsUI : Window
                         Lang.RemoveDictionaryEntry( sRemoveEntry );
                         sRemoveEntry = "";
                     }
-                    ImGui.EndTable();
+                    // TildeTools: EndTable removed, the using ends it
                 }
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
-            ImGui.EndTabItem();
+            // TildeTools: EndTabItem removed, the using ends it
         }
     }
 
     private void DrawLinkshellTab()
     {
-        if (ImGui.BeginTabItem("Linkshells##SettingsUITabItem"))
+        // TildeTools
+        using ( var tab = ImRaii.TabItem( "Linkshells##SettingsUITabItem" ) ) if ( tab )
+        // TildeTools ends
         {
-            if (ImGui.BeginChild("LinkshellsSettingsChildFrame", new(-1, GetCanvasSize() ) ))
+            // TildeTools
+            using ( var child = ImRaii.Child( "LinkshellsSettingsChildFrame", new( -1, GetCanvasSize() ) ) ) if ( child )
+            // TildeTools ends
             {
                 ImGui.Text("Linkshell Names");
                 
-                if (ImGui.BeginTable("LinkshellsNamesTable", 3, ImGuiTableFlags.BordersH))
+                // TildeTools
+                using ( var table = ImRaii.Table( "LinkshellsNamesTable", 3, ImGuiTableFlags.BordersH ) ) if ( table )
+                // TildeTools ends
                 {
                     ImGui.TableSetupColumn("LinkshellRowHeaderColumn", ImGuiTableColumnFlags.WidthFixed, 10 * ImGuiHelpers.GlobalScale);
                     ImGui.TableSetupColumn("LinkshellNameColumn", ImGuiTableColumnFlags.WidthStretch, 1);
@@ -1176,21 +1260,25 @@ internal sealed partial class SettingsUI : Window
                         _ = ImGui.InputText($"##SettingsCWLinkshellName{i}", ref this._cwlinkshells[i], 32);
                     }
 
-                    ImGui.EndTable();
+                    // TildeTools: EndTable removed, the using ends it
                 }
 
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
 
-            ImGui.EndTabItem();
+            // TildeTools: EndTabItem removed, the using ends it
         }
     }
 
     private void DrawColorsTab()
     {
-        if ( ImGui.BeginTabItem( "Colors##SettingsUITabItem" ) )
+        // TildeTools
+        using ( var tab = ImRaii.TabItem( "Colors##SettingsUITabItem" ) ) if ( tab )
+        // TildeTools ends
         {
-            if ( ImGui.BeginChild( "ColorsSettingsChildFrame", new( -1, GetCanvasSize() ) ) )
+            // TildeTools
+            using ( var child = ImRaii.Child( "ColorsSettingsChildFrame", new( -1, GetCanvasSize() ) ) ) if ( child )
+            // TildeTools ends
             {
                 _ = ImGui.Checkbox( "Enable Text Colorization##SettingsUICheckbox", ref this._enableTextColor );
                 ImGui.Spacing();
@@ -1206,12 +1294,14 @@ internal sealed partial class SettingsUI : Window
                     ImGui.OpenPopup( "SettingsUIErrorHighlightingColorPickerPopup" );
                     this._backupColor = this._spellingErrorColor;
                 }
-                if ( ImGui.BeginPopup( "SettingsUIErrorHighlightingColorPickerPopup" ) )
+                // TildeTools
+                using ( var popup = ImRaii.Popup( "SettingsUIErrorHighlightingColorPickerPopup" ) ) if ( popup )
+                // TildeTools ends
                 {
                     if ( ImGui.ColorPicker4( "##SettingsUIErrorHighlightingPicker", ref this._backupColor ) )
                         this._spellingErrorColor = this._backupColor;
 
-                    ImGui.EndPopup();
+                    // TildeTools: EndPopup removed, the using ends it
                 }
                 ImGui.SameLine( 0, 5 * ImGuiHelpers.GlobalScale );
                 ImGui.Text( $"Spelling Error Color" );
@@ -1220,7 +1310,9 @@ internal sealed partial class SettingsUI : Window
                 ImGui.Spacing();
                 ImGui.Text( "Chat Header Colors" );
 
-                if (ImGui.BeginTable("ColorSettingsTable", 10))
+                // TildeTools
+                using ( var table = ImRaii.Table( "ColorSettingsTable", 10 ) ) if ( table )
+                // TildeTools ends
                 {
                     ImGui.TableSetupColumn( "LeftColorOuterColorColumn", ImGuiTableColumnFlags.WidthFixed, 30 * ImGuiHelpers.GlobalScale );
                     ImGui.TableSetupColumn( "LeftColorOuterChatColumn" );
@@ -1252,29 +1344,33 @@ internal sealed partial class SettingsUI : Window
                             ImGui.OpenPopup( $"SettingsUIHighlightingColorPickerPopup{options[i]}" );
                             this._backupColor = this._headerColors[i];
                         }
-                        if ( ImGui.BeginPopup( $"SettingsUIHighlightingColorPickerPopup{options[i]}" ) )
+                        // TildeTools
+                        using ( var popup = ImRaii.Popup( $"SettingsUIHighlightingColorPickerPopup{options[i]}" ) ) if ( popup )
+                        // TildeTools ends
                         {
 
                             if ( ImGui.ColorPicker4( "##SettingsUIErrorHighlightingPicker", ref this._backupColor ) )
                                 this._headerColors[i] = this._backupColor;
 
-                            ImGui.EndPopup();
+                            // TildeTools: EndPopup removed, the using ends it
                         }
 
                         _ = ImGui.TableNextColumn();
                         ImGui.Text( $"{options[i]}" );
                     }
-                    ImGui.EndTable();
+                    // TildeTools: EndTable removed, the using ends it
                 }
-                ImGui.EndChild();
+                // TildeTools: EndChild removed, the using ends it, even when the child is clipped
             }
-            ImGui.EndTabItem();
+            // TildeTools: EndTabItem removed, the using ends it
         }
     }
 
     private void DrawFooter()
     {
-        if (ImGui.BeginTable("SettingsUISaveCloseCancelButtonTable", 6))
+        // TildeTools
+        using ( var table = ImRaii.Table( "SettingsUISaveCloseCancelButtonTable", 6 ) ) if ( table )
+        // TildeTools ends
         {
             ImGui.TableSetupColumn( "SettingsUIFoundBugColumn", ImGuiTableColumnFlags.WidthFixed, 100 * ImGuiHelpers.GlobalScale );
             ImGui.TableSetupColumn( "SettingsUIKoFiButtonColumn", ImGuiTableColumnFlags.WidthFixed, 100 * ImGuiHelpers.GlobalScale );
@@ -1333,7 +1429,7 @@ internal sealed partial class SettingsUI : Window
             if (ImGui.Button("Close", new( -1, Wordsmith.BUTTON_Y.Scale() ) ))
                 this.IsOpen = false;
 
-            ImGui.EndTable();
+            // TildeTools: EndTable removed, the using ends it
         }
     }
 
