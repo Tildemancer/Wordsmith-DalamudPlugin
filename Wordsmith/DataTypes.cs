@@ -328,38 +328,46 @@ internal sealed partial class HeaderData
     public HeaderData(string headstring)
     {
         // If it doesn't start with a slash, we don't even try.
-        Match re = WordRegex().Match( headstring );
-        if (!re.Success)
+        // TildeTools
+        int start = Spaces( headstring, 0 );
+        if ( start >= headstring.Length || headstring[start] != '/' )
             return;
+
+        int word = WordChars( headstring, start + 1, false );
+        if ( word == start + 1 || Spaces( headstring, word ) == word )
+            return;
+        // TildeTools ends
 
         // Find a matching header by default.
         for (int i = 1; i < Enum.GetValues(typeof(ChatType)).Length; ++i)
         {
-            // Pattern will match long and short values.
-            string pattern = ((ChatType)i).GetPattern();
-            Match m = Regex.Match(headstring, pattern +"\\s+");
-
-            // If the string starts with the header for the chat type then mark it
-           if ( !m.Success )
+            // TildeTools
+            bool isLong = !MatchHeader( headstring, start, (ChatType)i, ((ChatType)i).GetShortHeader(), out string target, out int channel );
+            if ( isLong && !MatchHeader( headstring, start, (ChatType)i, ((ChatType)i).GetLongHeader(), out target, out channel ) )
                 continue;
+            // TildeTools ends
 
             // Get the chat type
             this.ChatType = (ChatType)i;
 
-            // Groups = [match, short, long] so check if long matched for
-            // whether or not to use the long name.
-            this._useLongName = m.Groups["long"].Success;
+            // TildeTools
+            this._useLongName = isLong;
+            // TildeTools ends
 
             // Get the target if there is one.
             if( this.ChatType == ChatType.Tell )
             {
-                this.TellTarget = m.Groups["target"].Value;
+                // TildeTools
+                this.TellTarget = target;
+                // TildeTools ends
             }
             // Get the linkshell channel if there is one.
             else if( this.ChatType >= ChatType.Linkshell )
             {
                 // Get the Linkshell channel but subtract 1 to account for 0 indexing.
-                this.Linkshell = int.Parse( m.Groups["channel"].Value ) - 1;
+                // TildeTools
+                this.Linkshell = channel - 1;
+                // TildeTools ends
                 this.CrossWorld = this.ChatType > ChatType.Linkshell;
                 this.ChatType = ChatType.Linkshell;
             }
@@ -375,8 +383,9 @@ internal sealed partial class HeaderData
             foreach ((int id, string alias, object? data) in Wordsmith.Configuration.HeaderAliases)
             {
                 // If a matching alias is found
-                Match m = Regex.Match(headstring, $"^/{alias}\\s+");
-                if (m.Success)
+                // TildeTools
+                if ( MatchHeader( headstring, 0, ChatType.None, $"/{alias}", out _, out _ ) )
+                // TildeTools ends
                 {
                     this.ChatType = (ChatType)id;
                     if ( this.ChatType == ChatType.None )
@@ -415,8 +424,64 @@ internal sealed partial class HeaderData
     }
 
     public override string ToString() => this.Headstring;
-    [GeneratedRegex( @"^\s*(/(\w+))\s+" )]
-    private static partial Regex WordRegex();
+
+    // TildeTools
+    // Match as upstream's regexes did, \s as char.IsWhiteSpace and \w as letters, digits, Mn and Pc
+    private static int Spaces( string s, int i )
+    {
+        while ( i < s.Length && char.IsWhiteSpace( s[i] ) )
+            i++;
+
+        return i;
+    }
+
+    private static int WordChars( string s, int i, bool apostrophes )
+    {
+        while ( i < s.Length && (char.IsLetterOrDigit( s[i] ) || char.GetUnicodeCategory( s[i] ) is System.Globalization.UnicodeCategory.NonSpacingMark or System.Globalization.UnicodeCategory.ConnectorPunctuation || (apostrophes && s[i] == '\'')) )
+            i++;
+
+        return i;
+    }
+
+    // The header, a tell's "First Last@World" or a linkshell's digit, then whitespace
+    private static bool MatchHeader( string s, int at, ChatType type, string header, out string target, out int channel )
+    {
+        (target, channel) = ("", 0);
+        if ( !s.AsSpan( at ).StartsWith( header, StringComparison.Ordinal ) )
+            return false;
+
+        int i = at + header.Length;
+        if ( type == ChatType.Tell )
+        {
+            int from = Spaces( s, i );
+            int first = WordChars( s, from, true );
+            if ( from == i || first == from || first >= s.Length || s[first] != ' ' )
+                return false;
+
+            int last = WordChars( s, first + 1, true );
+            if ( last == first + 1 || last >= s.Length || s[last] != '@' )
+                return false;
+
+            i = last + 1;
+            while ( i < s.Length && char.IsAsciiLetter( s[i] ) )
+                i++;
+
+            if ( i == last + 1 )
+                return false;
+
+            target = s[from..i];
+        }
+        else if ( type >= ChatType.Linkshell )
+        {
+            if ( i >= s.Length || !char.IsAsciiDigit( s[i] ) )
+                return false;
+
+            channel = s[i++] - '0';
+        }
+
+        return Spaces( s, i ) > i;
+    }
+    // TildeTools ends
 }
 
 /// <summary>

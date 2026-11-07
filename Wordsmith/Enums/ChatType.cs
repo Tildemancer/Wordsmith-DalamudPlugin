@@ -56,23 +56,5 @@ internal static class ChatTypeExtensions
         };
     }
 
-    internal static string GetPattern(this ChatType c)
-    {
-        // If the chat type is none, return nothing.
-        if ( c == ChatType.None )
-            return "";
-
-        // Create the pattern.
-        string pattern = $"^\\s*(?:(?<short>{c.GetShortHeader()})|(?<long>{c.GetLongHeader()}))";
-
-        // Tell pattern also requires user name@world
-        if ( c == ChatType.Tell )
-            pattern += "\\s+(?<target>[\\w']+ [\\w']+@[a-zA-Z]+)";
-
-        // If the chat type is linkshell, also check for a number.
-        if ( c >= ChatType.Linkshell )
-            pattern += "(?<channel>\\d)";
-
-        return pattern;
-    }
+    // TildeTools: GetPattern removed, HeaderData matches by hand. See HeaderData.MatchHeader
 }
