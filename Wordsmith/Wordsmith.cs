@@ -123,6 +123,7 @@ public sealed class Wordsmith : IDalamudPlugin
         // Get the configuration.
         // TildeTools
         Configuration = Hosting.LoadConfig();
+        ConfigRanges.Clamp( Configuration );
         Hosting.Initialize();
         // TildeTools ends
 

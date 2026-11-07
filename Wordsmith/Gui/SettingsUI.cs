@@ -1463,6 +1463,10 @@ internal sealed partial class SettingsUI : Window
         Wordsmith.Configuration.SpellingErrorHighlightColor = this._spellingErrorColor;
         Wordsmith.Configuration.HeaderColors = this._headerColors;
 
+        // TildeTools
+        ConfigRanges.Clamp( Wordsmith.Configuration );
+        // TildeTools ends
+
         // Save the configuration
         Wordsmith.Configuration.Save();
     }
